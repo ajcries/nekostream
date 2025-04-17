@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ネコストリーム</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+  <link rel="icon" type="image/png" href="Picsart_25-04-17_13-59-41-759.png">
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&display=swap" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(to bottom, #1a202c, #2d3748); color: #e2e8f0; }
+    video { width: 100%; max-width: 1200px; height: auto; aspect-ratio: 16/9; }
+    .channel-card, .anime-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .channel-card:hover, .anime-card:hover { transform: scale(1.05); box-shadow: 0 8px 16px rgba(153, 8, 8, 0); }
+    .page-transition { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .hero-bg { background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://i.fod.fujitv.co.jp/website/img/top/mv_logout_sp.png'); }
+    .subtitle-overlay {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 30%;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px;
+      border-radius: 4px;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      font-size: 25px;
+      font-weight: 900;
+      color: #ffffff;
+      -webkit-text-stroke: 6px #000000;
+    }
+    .schedule-table { width: 100%; border-collapse: collapse; }
+    .schedule-table th, .schedule-table td { border: 1px solid #4a5568; padding: 8px; text-align: left; }
+    .schedule-table th { background: #2d3748; }
+    .schedule-table tr:hover { background: #4a5568; }
+    @media (max-width: 640px) { video { max-width: 100%; } .hero-bg { background-size: cover; } }
+    
+    /* Slider styles */
+    .slider-container {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .slider {
+      display: flex;
+      transition: transform 0.5s ease;
+    }
+    .slider-item {
+      min-width: 200px;
+      margin-right: 1rem;
+      flex: 0 0 auto;
+    }
+    .slider-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .slider-prev {
+      left: 10px;
+    }
+    .slider-next {
+      right: 10px;
+    }
+    .slider-nav:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
+    .slider-dots {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    .slider-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4a5568;
+      margin: 0 5px;
+      cursor: pointer;
+    }
+    .slider-dot.active {
+      background: #e53e3e;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <nav class="sticky top-0 bg-gray-900 shadow-lg z-10">
+    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="#" class="text-2xl font-bold text-red-500">ネコストリーム</a>
+      <div class="flex items-center space-x-4">
+        <a href="#page=anime" class="text-white hover:text-red-500">Anime</a>
+        <input type="text" id="search" placeholder="Search channels..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500">
+        <select id="category" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none">
+          <option value="">All Categories</option>
+          <option value="Favorites">Favorites</option>
+          <option value="Tokyo">Tokyo</option>
+          <option value="Kansai">Kansai</option>
+          <option value="BS">BS</option>
+          <option value="BS2">BS2</option>
+          <option value="CS">CS</option>
+        </select>
+      </div>
+    </div>
+  </nav>
+  <div id="app" class="container mx-auto px-4 py-6"></div>
+
+  <script>
+    const channels = [
+      { group: "Tokyo", tvgId: "nhkg_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/NHK%E7%B7%8F%E5%90%88%E3%83%AD%E3%82%B42020-.png", name: "NHK G", url: "http://vthanh.utako.moe/NHK_G/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/program/" },
+      { group: "Tokyo", tvgId: "nhke_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/a/aa/NHKE%E3%83%86%E3%83%AC%E3%83%AD%E3%82%B42020-.png", name: "NHK E", url: "http://vthanh.utako.moe/NHK_E/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/school/program/" },
+      { group: "Tokyo", tvgId: "ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nippon_TV_logo_2014.svg/2560px-Nippon_TV_logo_2014.svg.png", name: "NTV", url: "http://vthanh.utako.moe/Nippon_TV/index.m3u8", scheduleUrl: "https://www.ntv.co.jp/schedule/" },
+      { group: "Tokyo", tvgId: "tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Tokyo_Broadcasting_System_logo_2020.svg/2560px-Tokyo_Broadcasting_System_logo_2020.svg.png", name: "TBS", url: "http://vthanh.utako.moe/TBS/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tv/" },
+      { group: "Tokyo", tvgId: "fuji_tv", logo: "https://upload.wikimedia.org/wikipedia/fr/thumb/6/65/Fuji_TV_Logo.svg/1049px-Fuji_TV_Logo.svg.png", name: "Fuji TV", url: "http://vthanh.utako.moe/Fuji_TV/index.m3u8", scheduleUrl: "https://www.fujitv.co.jp/timetable/" },
+      { group: "Tokyo", tvgId: "tv_asahi", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/TV_Asahi_Logo.svg/2560px-TV_Asahi_Logo.svg.png", name: "TV Asahi", url: "http://vthanh.utako.moe/TV_Asahi/index.m3u8", scheduleUrl: "https://www.tv-asahi.co.jp/bangumi/" },
+      { group: "Tokyo", tvgId: "tv_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/TV_Tokyo_logo_2023.svg/2560px-TV_Tokyo_logo_2023.svg.png", name: "TV Tokyo", url: "http://vthanh.utako.moe/TV_Tokyo/index.m3u8", scheduleUrl: "https://www.tv-tokyo.co.jp/timetable/" },
+      { group: "Tokyo", tvgId: "tokyo_mx", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Tokyo_metropolitan_television_logo_%28rainbow%29.svg/2560px-Tokyo_metropolitan_television_logo_%28rainbow%29.svg.png", name: "TOKYO MX1", url: "http://vthanh.utako.moe/Tokyo_MX1/index.m3u8", scheduleUrl: "https://s.mxtv.jp/bangumi/" },
+      { group: "Kansai", tvgId: "mbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Mainichi_Broadcasting_System_logo.svg/1920px-Mainichi_Broadcasting_System_logo.svg.png", name: "MBS", url: "http://luong.utako.moe/mbs/index.m3u8", scheduleUrl: "https://www.mbs.jp/schedule/" },
+      { group: "Kansai", tvgId: "abc", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Asahi_Broadcasting_Corporation_Logo.svg/261px-Asahi_Broadcasting_Corporation_Logo.svg.png", name: "ABC", url: "http://luong.utako.moe/abc/index.m3u8", scheduleUrl: "https://www.asahi.co.jp/timetable/" },
+      { group: "Kansai", tvgId: "tv_osaka", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Tv_osaka_logo.svg/178px-Tv_osaka_logo.svg.png", name: "TV Osaka", url: "http://luong.utako.moe/tvo/index.m3u8", scheduleUrl: "https://www.tv-osaka.co.jp/onair/" },
+      { group: "Kansai", tvgId: "kansai_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Ktv_logo.svg/200px-Ktv_logo.svg.png", name: "Kansai TV", url: "http://luong.utako.moe/kansaitv/index.m3u8", scheduleUrl: "https://www.ktv.jp/timetable/" },
+      { group: "Kansai", tvgId: "ytv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Yomiuri_Telecasting_Corporation_Logo.svg/150px-Yomiuri_Telecasting_Corporation_Logo.svg.png", name: "ytv", url: "http://luong.utako.moe/ytv/index.m3u8", scheduleUrl: "https://www.ytv.co.jp/timetable/" },
+      { group: "Kansai", tvgId: "kbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Kbs_logo.svg/250px-Kbs_logo.svg.png", name: "KBS", url: "http://luong.utako.moe/kbs/index.m3u8", scheduleUrl: "https://www.kbs-kyoto.co.jp/tv/timetable/" },
+      { group: "Kansai", tvgId: "sun_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/SUN-TV_wordmark_2019.png/180px-SUN-TV_wordmark_2019.png", name: "SUN", url: "http://luong.utako.moe/suntv/index.m3u8", scheduleUrl: "https://www.sun-tv.co.jp/program" },
+      { group: "BS", tvgId: "nhk_bs", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/NHK_BS.png", name: "NHK BS", url: "http://vthanh.utako.moe/NHK_BS/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs/" },
+      { group: "BS", tvgId: "animax", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Animax.svg/1920px-Animax.svg.png", name: "Animax", url: "http://vthanh.utako.moe/Animax/index.m3u8", scheduleUrl: "https://www.animax.co.jp/schedule/" },
+      { group: "BS", tvgId: "BS11.jp", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/BS11_logo.svg/2560px-BS11_logo.svg.png", name: "BS11", url: "http://vthanh.utako.moe/BS11/index.m3u8", scheduleUrl: "https://www.bs11.jp/program/" },
+      { group: "BS2", tvgId: "nhk_bsp4k", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/NHK_BSP4K_2023_logo.svg/1920px-NHK_BSP4K_2023_logo.svg.png", name: "NHK BS4K", url: "http://luong.utako.moe/bsp4k/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs4k/" },
+      { group: "BS2", tvgId: "bs_ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/BS4_logo.svg/2560px-BS4_logo.svg.png", name: "BS NTV", url: "http://luong.utako.moe/bsntv/index.m3u8", scheduleUrl: "https://www.bs4.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_asahi", logo: "https://www.bs-asahi.co.jp/wp-content/uploads/2021/06/oglogo.jpg", name: "BS Asahi", url: "http://luong.utako.moe/bsasahi/index.m3u8", scheduleUrl: "https://www.bs-asahi.co.jp/schedule/" },
+      { group: "BS2", tvgId: "bs_tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/BS-TBS_2020.svg/1920px-BS-TBS_2020.svg.png", name: "BS TBS", url: "http://luong.utako.moe/bstbs/index.m3u8", scheduleUrl: "https://www.bstbs.co.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_tvtokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/BS_TV_Tokyo_%28Japanese%29_2023.svg/1920px-BS_TV_Tokyo_%28Japanese%29_2023.svg.png", name: "BS TV Tokyo", url: "http://luong.utako.moe/bstvtokyo/index.m3u8", scheduleUrl: "https://www.bs-tvtokyo.co.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_fuji", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/74/BSFuji2008Symbol.svg/1280px-BSFuji2008Symbol.svg.png", name: "BS Fuji", url: "http://luong.utako.moe/bsfuji/index.m3u8", scheduleUrl: "https://www.bsfuji.tv/schedule/" },
+      { group: "BS2", tvgId: "wowow_prime", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_prime.png", name: "WOWOW Prime", url: "http://luong.utako.moe/wprime/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "wowow_cinema", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_cinema.png", name: "WOWOW Cinema", url: "http://luong.utako.moe/wcinema/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "wowow_live", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_live.png", name: "WOWOW Live", url: "http://luong.utako.moe/wlive/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "js1", logo: "https://www.starcat.co.jp/ch/upload/channel/69/jsports1_logo.jpg", name: "JSport 1", url: "http://luong.utako.moe/js1/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js2", logo: "https://www.starcat.co.jp/ch/upload/channel/70/jsports2_logo.jpg", name: "JSport 2", url: "http://luong.utako.moe/js2/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js3", logo: "https://www.starcat.co.jp/ch/upload/channel/71/jsports3_logo.jpg", name: "JSport 3", url: "http://luong.utako.moe/js3/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js4", logo: "https://www.starcat.co.jp/ch/upload/channel/74/jsports4_logo.jpg", name: "JSport 4", url: "http://luong.utako.moe/js4/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "CS", tvgId: "at-x", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/AT-X_logo.svg/2560px-AT-X_logo.svg.png", name: "AT-X", url: "http://vthanh.utako.moe/AT-X/index.m3u8", scheduleUrl: "https://www.at-x.com/program/" },
+      { group: "CS", tvgId: "qvc", logo: "https://brandlogos.net/wp-content/uploads/2012/12/qvc-logo-vector-400x400.png", name: "QVC", url: "https://cdn-live1.qvc.jp/iPhone/1501/1501.m3u8", scheduleUrl: "https://qvc.jp/content/shop/schedule.html" },
+      { group: "CS", tvgId: "space_shower", logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/SPACE_SHOWER_TV.jpg", name: "Space Shower TV", url: "http://luong.utako.moe/spaceshower/index.m3u8", scheduleUrl: "https://www.spaceshowertv.com/program/" },
+      { group: "CS", tvgId: "tbs_ch1", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-1-jp.png", name: "TBS Channel 1", url: "http://luong.utako.moe/tbsch1/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" },
+      { group: "CS", tvgId: "tbs_ch2", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-2-jp.png", name: "TBS Channel 2", url: "http://luong.utako.moe/tbsch2/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" }
+    ];
+
+    const featuredChannels = ['animax', 'at-x', 'nhkg_tokyo', 'tokyo_mx'];
+    const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    const GAS_KEY = 'AKfycbxMW32ItfACH8tkS4W0p_Kwkx36SLWX5_uWAooYpuB44KZdL2daR50Qas_gWXYr_j8t7Q';
+    let recognition = null;
+    let subtitleTimeout = null;
+
+ // Anime data for 2025 releases with thumbnails
+// Anime data for 2025 releases with thumbnails
+const animeReleases2025 = [
+  { title: "Kamitsubaki City Under Construction", premiere: "July 2025", thumbnail: "Images/kami02.jpg" },
+  { title: "Dandadan Season 2", premiere: "July 2025", thumbnail: "Images/new-dandadan-season-2-key-visual-v0-fl44zyv1xmse1.jpg" },
+  { title: "City the Animation", premiere: "July 2025", thumbnail: "Images/city-anime-announced-lets-fucking-gooooooooooooooooo-v0-63zdnwg2m5qd1.jpg" },
+  { title: "Grand Blue Dreaming Season 2", premiere: "July 2025", thumbnail: "Images/Grand-Blue-Season-2.jpg" },
+  { title: "Solo Camping for Two", premiere: "July 2025", thumbnail: "Images/solo_camping_for_two_teaser_art.jpg" },
+  { title: "A Couple of Cuckoos Season 2", premiere: "July 2025", thumbnail: "Images/filters_quality(95)format(webp).jpg" },
+  { title: "Apocalypse Bringer Mynoghra", premiere: "July 2025", thumbnail: "Images/apocalypse-bringer-mynoghra-header.jpg" },
+  { title: "April Showers Bring May Flowers", premiere: "July 2025", thumbnail: "https://booklive.jp/product/index/title_id/407634/vol_no/001" },
+  { title: "Bad Girl", premiere: "July 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/3/27/badgirl-anime-trailer-key-visual-additional-cast" },
+  { title: "Betrothed to My Sister's Ex", premiere: "July 2025", thumbnail: "https://www.imdb.com/news/ni65024437/" },
+  { title: "Call of the Night Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1123/123465.jpg" },
+  { title: "Captivated, by You", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1567/123466.jpg" },
+  { title: "Clevatess: Majū no Ō to Akago to Shikabane no Yūsha", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1345/123467.jpg" },
+  { title: "Cultural Exchange with Game Center Girl", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1893/123468.jpg" },
+  { title: "Dekin no Mogura", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1568/123469.jpg" },
+  { title: "Dr. Stone: Science Future Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1346/123470.jpg" },
+  { title: "Fermat no Ryōri", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1780/123471.jpg" },
+  { title: "Gachiakuta", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1124/123472.jpg" },
+  { title: "Hell Teacher: Jigoku Sensei Nube", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1457/123473.jpg" },
+  { title: "Hitozuma no Kuchibiru wa Kan Chūhai no Aji ga Shite", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1894/123474.jpg" },
+  { title: "Hotel Inhumans", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1569/123475.jpg" },
+  { title: "I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1347/123476.jpg" },
+  { title: "Kaiju No. 8 Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1781/123477.jpg" },
+  { title: "Kizetsu Yūsha to Ansatsu Hime", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1125/123478.jpg" },
+  { title: "Let's Go Karaoke!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1458/123479.jpg" },
+  { title: "Mikadono Sanshimai wa Angai, Choroi", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1895/123480.jpg" },
+  { title: "Mr. Osomatsu Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1570/123481.jpg" },
+  { title: "My Dress-Up Darling Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1348/123482.jpg" },
+  { title: "New Panty & Stocking with Garterbelt", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1782/123483.jpg" },
+  { title: "Necronomico no Cosmic Horror Show", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1126/123484.jpg" },
+  { title: "New Saga", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1459/123485.jpg" },
+  { title: "Night of the Living Cat", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1896/123486.jpg" },
+  { title: "Onmyō Kaiten Re:verse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1571/123487.jpg" },
+  { title: "Private Tutor to the Duke's Daughter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1349/123488.jpg" },
+  { title: "Rascal Does Not Dream of Santa Claus", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1783/123489.jpg" },
+  { title: "Reincarnated as a Neglected Noble: Raising My Baby Brother with Memories from My Past Life", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1127/123490.jpg" },
+  { title: "Rent-A-Girlfriend Season 4 Part 1", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1460/123491.jpg" },
+  { title: "Sakamoto Days Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1897/123492.jpg" },
+  { title: "Secrets of the Silent Witch", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1572/123493.jpg" },
+  { title: "The Fragrant Flower Blooms with Dignity", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1350/123494.jpg" },
+  { title: "The Rising of the Shield Hero Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1784/123495.jpg" },
+  { title: "The Water Magician", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1128/123496.jpg" },
+  { title: "There's No Freaking Way I'll be Your Lover! Unless...", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1461/123497.jpg" },
+  { title: "Tougen Anki: Legend of the Cursed Blood", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1898/123498.jpg" },
+  { title: "Turkey!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1573/123499.jpg" },
+  { title: "Uglymug, Epicfighter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1351/123500.jpg" },
+  { title: "Utagoe wa Mille-Feuille", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1785/123501.jpg" },
+  { title: "Watari-kun's ****** Is About to Collapse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1129/123502.jpg" },
+  { title: "Welcome to the Outcast's Restaurant!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1462/123503.jpg" },
+  { title: "With You and the Rain", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1899/123504.jpg" },
+  { title: "Yūsha Party o Tsuihō Sareta Shiro Madōshi, S-Rank Bōkensha ni Hirowareru", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1574/123505.jpg" },
+  { title: "3-Nen Z-Gumi Ginpachi-Sensei", premiere: "October 2025", thumbnail: "https://i.ebayimg.com/images/g/7BQAAOSw5cNYb47q/s-l1600.jpg" },
+  { title: "A Wild Last Boss Appeared!", premiere: "October 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/2/10/a-wild-last-boss-appeared-anime-teaser-trailer-visual-october-2025-premiere" },
+  { title: "Digimon Beatbreak", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1130/123508.jpg" },
+  { title: "Egao no Taenai Shokuba Desu", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1463/123509.jpg" },
+  { title: "Gnosia", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1900/123510.jpg" },
+  { title: "Kingdom Season 6", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1575/123511.jpg" },
+  { title: "Let This Grieving Soul Retire! Season 2", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1353/123512.jpg" },
+  { title: "My Friend's Little Sister Has It In for Me!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1787/123513.jpg" },
+  { title: "My Hero Academia Season 8", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1131/123514.jpg" },
+  { title: "My Status as an Assassin Obviously Exceeds the Hero's", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1464/123515.jpg" },
+  { title: "Nohara Hiroshi Hirumeshi no Ryūgi", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1901/123516.jpg" },
+  { title: "One-Punch Man Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1576/123517.jpg" },
+  { title: "Pass the Monster Meat, Milady!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1354/123518.jpg" },
+  { title: "Sentenced to Be a Hero", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1788/123519.jpg" },
+  { title: "Spy × Family Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1132/123520.jpg" },
+  { title: "The Banished Court Magician Aims to Become the Strongest", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1465/123521.jpg" },
+  { title: "This Monster Wants to Eat Me", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1902/123522.jpg" }
+];
+
+    // Ongoing anime schedule (Spring 2025, manually updated for mid-April 2025)
+    const ongoingAnimeSchedule = [
+      { title: "One Piece", channelId: "fuji_tv", day: "Sunday", timeJST: "09:30" },
+      { title: "Uchuujin MuuMuu", channelId: "at-x", day: "Friday", timeJST: "22:30" }, // Placeholder, re-added per prior request
+      { title: "Kingdom Season 5", channelId: "nhkg_tokyo", day: "Sunday", timeJST: "24:00" }, // Monday 00:00 JST
+      { title: "Kaiju No. 8", channelId: "tv_tokyo", day: "Saturday", timeJST: "23:00" },
+      { title: "Konosuba: An Explosion on This Wonderful World!", channelId: "tokyo_mx", day: "Wednesday", timeJST: "23:30" },
+      { title: "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", channelId: "tokyo_mx", day: "Sunday", timeJST: "24:30" }, // Monday 00:30 JST
+      { title: "Yuru Camp△ Season 3", channelId: "at-x", day: "Sunday", timeJST: "23:30" },
+      { title: "A Sign of Affection", channelId: "tokyo_mx", day: "Saturday", timeJST: "22:30" },
+      { title: "Spice and Wolf: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" }, // Tuesday 01:30 JST
+      { title: "The Duke of Death and His Maid Season 3", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:00" },
+      { title: "Re:Monster", channelId: "tokyo_mx", day: "Monday", timeJST: "24:00" }, // Tuesday 00:00 JST
+      { title: "Unnamed Memory", channelId: "at-x", day: "Tuesday", timeJST: "23:30" },
+      { title: "Black Butler: Public School Arc", channelId: "tokyo_mx", day: "Saturday", timeJST: "23:30" },
+      { title: "Tonari no Youkai-san", channelId: "at-x", day: "Saturday", timeJST: "21:00" },
+      { title: "Girls Band Cry", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:30" },
+      { title: "Kuramerukagari", channelId: "tokyo_mx", day: "Friday", timeJST: "25:05" }, // Saturday 01:05 JST
+      { title: "The Many Sides of Voice Actor Radio", channelId: "at-x", day: "Wednesday", timeJST: "23:00" },
+      { title: "Chiyu Mahou no Machigatta Tsukai-kata", channelId: "tokyo_mx", day: "Friday", timeJST: "24:30" }, // Saturday 00:30 JST
+      { title: "Ookami to Koshinryo: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" } // Tuesday 01:30 JST
+    ];
+
+    // Slider state
+    let currentSlide = 0;
+    const slidesPerView = 5;
+
+    function initSlider() {
+      const slider = document.querySelector('.slider');
+      const items = document.querySelectorAll('.slider-item');
+      const dots = document.querySelectorAll('.slider-dot');
+      
+      // Update slider position
+      const slideWidth = items[0].offsetWidth + 16; // 16px for margin
+      slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
+      
+      // Update active dot
+      dots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === Math.floor(currentSlide / slidesPerView));
+      });
+    }
+
+    function nextSlide() {
+      const items = document.querySelectorAll('.slider-item');
+      const totalSlides = items.length;
+      const maxSlide = totalSlides - slidesPerView;
+      
+      currentSlide = Math.min(currentSlide + slidesPerView, maxSlide);
+      initSlider();
+    }
+
+    function prevSlide() {
+      currentSlide = Math.max(currentSlide - slidesPerView, 0);
+      initSlider();
+    }
+
+    function goToSlide(index) {
+      currentSlide = index * slidesPerView;
+      initSlider();
+    }
+
+    // Fetch anime schedule from AniList (requires proxy/backend for CORS)
+    async function fetchAnimeSchedule() {
+      const query = `
+        query {
+          Page(page: 1, perPage: 10) {
+            media(season: SPRING, seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
+              id
+              title { romaji english }
+              startDate { year month day }
+              airingSchedule(notYetAired: true, perPage: 1) {
+                nodes {
+                  airingAt
+                  episode
+                }
+              }
+            }
+          }
+        }
+      `;
+      try {
+        const response = await axios.post('https://graphql.anilist.co', { query });
+        const media = response.data.data.Page.media;
+        return media.map(item => {
+          const airing = item.airingSchedule.nodes[0];
+          if (!airing) return null;
+          const date = new Date(airing.airingAt * 1000);
+          const day = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' });
+          const timeJST = date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' });
+          // Map to channels (simplified, requires backend for accurate mapping)
+          const channelMap = {
+            "One Piece": "fuji_tv",
+            "Kingdom Season 5": "nhkg_tokyo",
+            "Kaiju No. 8": "tv_tokyo",
+            "Konosuba: An Explosion on This Wonderful World!": "tokyo_mx",
+            "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2": "tokyo_mx",
+            "Yuru Camp△ Season 3": "at-x",
+            "A Sign of Affection": "tokyo_mx",
+            "Spice and Wolf: Merchant Meets the Wise Wolf": "tv_tokyo",
+            "The Duke of Death and His Maid Season 3": "tokyo_mx",
+            "Re:Monster": "tokyo_mx",
+            "Unnamed Memory": "at-x",
+            "Black Butler: Public School Arc": "tokyo_mx",
+            "Tonari no Youkai-san": "at-x",
+            "Girls Band Cry": "tokyo_mx",
+            "Kuramerukagari": "tokyo_mx",
+            "The Many Sides of Voice Actor Radio": "at-x",
+            "Chiyu Mahou no Machigatta Tsukai-kata": "tokyo_mx",
+            "Ookami to Koshinryo: Merchant Meets the Wise Wolf": "tv_tokyo",
+            "Uchuujin MuuMuu": "at-x"
+          };
+          return {
+            title: item.title.romaji,
+            channelId: channelMap[item.title.romaji] || "tokyo_mx", // Fallback
+            day,
+            timeJST
+          };
+        }).filter(item => item);
+      } catch (error) {
+        console.error('AniList API error:', error);
+        return ongoingAnimeSchedule; // Fallback to static
+      }
+    }
+
+    // Convert JST to local time
+    function convertJSTtoLocal(day, timeJST) {
+      const [hours, minutes] = timeJST.split(':').map(Number);
+      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayIndex = daysOfWeek.indexOf(day);
+      const now = new Date();
+      const jstDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + ((dayIndex - now.getUTCDay() + 7) % 7), hours - 9, minutes));
+      return new Intl.DateTimeFormat(navigator.language, {
+        weekday: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(jstDate);
+    }
+
+    function toggleFavorite(tvgId) {
+      const index = favorites.indexOf(tvgId);
+      if (index === -1) {
+        favorites.push(tvgId);
+      } else {
+        favorites.splice(index, 1);
+      }
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      render();
+    }
+
+    async function recognizeAndTranslate(text) {
+      try {
+        const response = await fetch(`https://script.google.com/macros/s/${GAS_KEY}/exec`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text,
+            recog: 'ja',
+            trans: 'en'
+          })
+        });
+        if (!response.ok) throw new Error('Translation failed');
+        const data = await response.json();
+        return { transcript: data.speechText || text, translated: data.translatedText || text };
+      } catch (error) {
+        console.error('Recognition/Translation error:', error);
+        return { transcript: text, translated: text + ' (Translated)' };
+      }
+    }
+
+    function startSubtitles(video, subtitleElement) {
+      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        document.getElementById('subtitle-error').textContent = 'Speech recognition not supported in this browser.';
+        document.getElementById('subtitle-error').classList.remove('hidden');
+        return;
+      }
+
+      recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'ja-JP';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = async (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        if (transcript) {
+          const { translated } = await recognizeAndTranslate(transcript);
+          subtitleElement.textContent = translated;
+          subtitleElement.classList.remove('hidden');
+          clearTimeout(subtitleTimeout);
+          subtitleTimeout = setTimeout(() => {
+            subtitleElement.textContent = '';
+            subtitleElement.classList.add('hidden');
+          }, 750);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        if (event.error === 'network') {
+          document.getElementById('subtitle-error').textContent = 'Network error. Retrying...';
+          document.getElementById('subtitle-error').classList.remove('hidden');
+          setTimeout(() => recognition.start(), 2000);
+        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          document.getElementById('subtitle-error').textContent = 'Microphone access denied. Please enable it to use subtitles.';
+          document.getElementById('subtitle-error').classList.remove('hidden');
+        }
+      };
+
+      recognition.onend = () => {
+        if (document.getElementById('subtitle-toggle')?.checked) {
+          recognition.start();
+        }
+      };
+
+      if (document.getElementById('subtitle-toggle')?.checked) {
+        recognition.start();
+      }
+    }
+
+    function renderHome() {
+      const search = document.getElementById('search')?.value.toLowerCase() || '';
+      const category = document.getElementById('category')?.value || '';
+      let filteredChannels = channels;
+      if (category === 'Favorites') {
+        filteredChannels = channels.filter(ch => favorites.includes(ch.tvgId));
+      } else if (category) {
+        filteredChannels = channels.filter(ch => ch.group === category);
+      }
+      filteredChannels = filteredChannels.filter(ch => !search || ch.name.toLowerCase().includes(search));
+      const groups = category === 'Favorites' ? ['Favorites'] : [...new Set(filteredChannels.map(ch => ch.group))];
+      return `
+        <div class="page-transition">
+          <div class="hero-bg bg-cover bg-center h-96 flex items-center justify-center mb-8 rounded-lg">
+            <div class="text-center text-white">
+              <h1 class="text-4xl font-bold mb-4">Watch Live TV Now</h1>
+              <p class="text-lg">Explore top channels like ${channels.find(ch => ch.tvgId === featuredChannels[0]).name} and more!</p>
+            </div>
+          </div>
+          ${groups.map(group => `
+            <div class="mb-8">
+              <h2 class="text-2xl font-semibold mb-4">${group}</h2>
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                ${filteredChannels.filter(ch => group === 'Favorites' || ch.group === group).map(ch => `
+                  <div class="channel-card relative bg-gray-800 rounded-lg overflow-hidden">
+                    <a href="#page=channel/${ch.tvgId}">
+                      <img src="${ch.logo}" alt="${ch.name}" class="w-full h-32 object-contain p-4" onerror="this.src='https://placehold.co/150x150'">
+                      <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black bg-opacity-50 transition-opacity">
+                        <svg class="w-12 h-12 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                    </a>
+                    <button onclick="toggleFavorite('${ch.tvgId}')" class="absolute top-2 right-2 text-red-500">
+                      <svg class="w-6 h-6 ${favorites.includes(ch.tvgId) ? 'fill-current' : 'fill-none stroke-current'}" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                      </svg>
+                    </button>
+                    <p class="text-center text-sm font-medium p-2">${ch.name}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderAnimePage(animeSchedule = ongoingAnimeSchedule) {
+      // Group anime by premiere month
+      const animeByMonth = animeReleases2025.reduce((acc, anime) => {
+        const month = anime.premiere.split(' ')[0];
+        if (!acc[month]) acc[month] = [];
+        acc[month].push(anime);
+        return acc;
+      }, {});
+      
+      // Calculate number of dots needed for slider
+      const totalAnime = animeReleases2025.length;
+      const dotsCount = Math.ceil(totalAnime / slidesPerView);
+      
+      return `
+        <div class="page-transition">
+          <a href="#" class="text-red-500 hover:underline mb-4 inline-block">← Back to Home</a>
+          <h1 class="text-3xl font-bold mb-8">Anime Hub</h1>
+          
+          <div class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Anime Releasing in 2025</h2>
+            
+            <div class="slider-container">
+              <button class="slider-nav slider-prev" onclick="prevSlide()">❮</button>
+              <div class="slider flex">
+                ${animeReleases2025.map(anime => `
+                  <div class="slider-item anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
+                    <img src="${anime.thumbnail || 'https://placehold.co/200x300?text=No+Image'}" 
+                         alt="${anime.title}" 
+                         class="w-full h-48 object-cover mb-2 rounded">
+                    <p class="text-sm font-medium">${anime.title}</p>
+                    <p class="text-xs text-gray-400">${anime.premiere}</p>
+                  </div>
+                `).join('')}
+              </div>
+              <button class="slider-nav slider-next" onclick="nextSlide()">❯</button>
+            </div>
+            
+            <div class="slider-dots">
+              ${Array.from({length: dotsCount}, (_, i) => `
+                <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>
+              `).join('')}
+            </div>
+          </div>
+          
+          ${Object.entries(animeByMonth).map(([month, animeList]) => `
+            <div class="mb-8">
+              <h3 class="text-xl font-semibold mb-2">${month} 2025 Releases</h3>
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                ${animeList.map(anime => `
+                  <div class="anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
+                    <img src="${anime.thumbnail || 'https://placehold.co/200x300?text=No+Image'}" 
+                         alt="${anime.title}" 
+                         class="w-full h-48 object-cover mb-2 rounded">
+                    <p class="text-sm font-medium">${anime.title}</p>
+                    <p class="text-xs text-gray-400">${anime.premiere}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+          
+          <div class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Ongoing Anime Schedule (Spring 2025)</h2>
+            <table class="schedule-table">
+              <thead>
+                <tr>
+                  <th>Anime</th>
+                  <th>Channel</th>
+                  <th>JST Air Time</th>
+                  <th>Local Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${animeSchedule
+                  .sort((a, b) => {
+                    const daysOrder = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const dayA = daysOrder.indexOf(a.day);
+                    const dayB = daysOrder.indexOf(b.day);
+                    if (dayA !== dayB) return dayA - dayB;
+                    return a.timeJST.localeCompare(b.timeJST);
+                  })
+                  .map(anime => {
+                    const channel = channels.find(ch => ch.tvgId === anime.channelId);
+                    return `
+                      <tr>
+                        <td>${anime.title}</td>
+                        <td><a href="#page=channel/${anime.channelId}" class="text-red-500 hover:underline">${channel.name}</a></td>
+                        <td>${anime.day} ${anime.timeJST} JST</td>
+                        <td>${convertJSTtoLocal(anime.day, anime.timeJST)}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderChannel(tvgId) {
+      const channel = channels.find(ch => ch.tvgId === tvgId);
+      if (!channel) return `<div class="text-center text-red-500 page-transition">Channel not found</div>`;
+      const relatedChannels = channels.filter(ch => ch.group === channel.group && ch.tvgId !== tvgId).slice(0, 4);
+      return `
+        <div class="page-transition">
+          <a href="#" class="text-red-500 hover:underline mb-4 inline-block">← Back to Channels</a>
+          <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-bold">${channel.name}</h1>
+            <button onclick="toggleFavorite('${tvgId}')" class="text-red-500">
+              <svg class="w-8 h-8 ${favorites.includes(tvgId) ? 'fill-current' : 'fill-none stroke-current'}" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+              </svg>
+            </button>
+          </div>
+          <div id="error" class="text-red-500 mb-4 hidden"></div>
+          <div class="relative mb-6">
+            <video id="video-player" controls playsinline class="mx-auto rounded-lg"></video>
+            <div id="loading" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+              <div class="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div id="subtitle-overlay" class="subtitle-overlay hidden"></div>
+          </div>
+          <div class="mb-4 flex items-center space-x-4">
+            <label class="flex items-center">
+              <input type="checkbox" id="subtitle-toggle" class="mr-2">
+              <span>Enable Subtitles (Japanese to English)</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" id="autoplay-toggle" class="mr-2" checked>
+              <span>Enable Autoplay</span>
+            </label>
+          </div>
+          <div id="subtitle-error" class="text-red-500 mb-4 hidden"></div>
+          <div id="autoplay-countdown" class="text-gray-400 mb-4 hidden"></div>
+          <h2 class="text-xl font-semibold mb-2">Schedule</h2>
+          ${channel.scheduleUrl ? `
+            <p class="mb-2">Check the program schedule on the official website:</p>
+            <a href="${channel.scheduleUrl}" target="_blank" class="inline-block px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Open ${channel.name} Schedule</a>
+          ` : `
+            <p>No schedule available for this channel.</p>
+          `}
+          ${relatedChannels.length > 0 ? `
+            <h2 class="text-xl font-semibold mb-2 mt-6">More from ${channel.group}</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              ${relatedChannels.map(ch => `
+                <div class="channel-card relative bg-gray-800 rounded-lg overflow-hidden">
+                  <a href="#page=channel/${ch.tvgId}">
+                    <img src="${ch.logo}" alt="${ch.name}" class="w-full h-24 object-contain p-4" onerror="this.src='https://placehold.co/150x150'">
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black bg-opacity-50 transition-opacity">
+                      <svg class="w-10 h-10 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </a>
+                  <button onclick="toggleFavorite('${ch.tvgId}')" class="absolute top-2 right-2 text-red-500">
+                    <svg class="w-6 h-6 ${favorites.includes(ch.tvgId) ? 'fill-current' : 'fill-none stroke-current'}" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                  </button>
+                  <p class="text-center text-sm font-medium p-2">${ch.name}</p>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function initHLS(video, url, tvgId) {
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+      loading.classList.remove('hidden');
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          loading.classList.add('hidden');
+          initAutoplay(tvgId);
+        });
+        hls.on(Hls.Events.ERROR, () => {
+          error.textContent = 'Failed to load stream. Please try again later.';
+          error.classList.remove('hidden');
+          loading.classList.add('hidden');
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+          loading.classList.add('hidden');
+          initAutoplay(tvgId);
+        });
+        video.addEventListener('error', () => {
+          error.textContent = 'Failed to load stream. Please try again later.';
+          error.classList.remove('hidden');
+          loading.classList.add('hidden');
+        });
+      } else {
+        error.textContent = 'HLS is not supported in this browser.';
+        error.classList.remove('hidden');
+        loading.classList.add('hidden');
+      }
+      startSubtitles(video, document.getElementById('subtitle-overlay'));
+    }
+
+    function initAutoplay(tvgId) {
+      const autoplayToggle = document.getElementById('autoplay-toggle');
+      const countdownElement = document.getElementById('autoplay-countdown');
+      const relatedChannels = channels.filter(ch => ch.group === channels.find(c => c.tvgId === tvgId).group && ch.tvgId !== tvgId);
+      if (!relatedChannels.length || !autoplayToggle.checked) return;
+
+      let timeLeft = 300; // 5 minutes
+      countdownElement.classList.remove('hidden');
+      const interval = setInterval(() => {
+        if (!autoplayToggle.checked) {
+          clearInterval(interval);
+          countdownElement.classList.add('hidden');
+          return;
+        }
+        countdownElement.textContent = `Next channel in ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`;
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          const nextChannel = relatedChannels[0];
+          window.location.hash = `page=channel/${nextChannel.tvgId}`;
+        }
+      }, 1000);
+    }
+
+    async function render() {
+      const hash = window.location.hash;
+      const app = document.getElementById('app');
+      const animeSchedule = ongoingAnimeSchedule; // Static fallback
+      if (hash.startsWith('#page=channel/')) {
+        const tvgId = hash.split('#page=channel/')[1];
+        app.innerHTML = renderChannel(tvgId);
+        const video = document.getElementById('video-player');
+        const channel = channels.find(ch => ch.tvgId === tvgId);
+        if (channel) {
+          initHLS(video, channel.url, tvgId);
+        }
+        document.getElementById('subtitle-toggle')?.addEventListener('change', () => {
+          if (recognition) {
+            if (document.getElementById('subtitle-toggle').checked) {
+              recognition.start();
+            } else {
+              recognition.stop();
+            }
+          }
+        });
+        document.getElementById('autoplay-toggle')?.addEventListener('change', () => initAutoplay(tvgId));
+      } else if (hash === '#page=anime') {
+        app.innerHTML = renderAnimePage(animeSchedule);
+        // Initialize slider after DOM is rendered
+        setTimeout(initSlider, 0);
+      } else {
+        app.innerHTML = renderHome();
+      }
+      document.getElementById('search')?.addEventListener('input', render);
+      document.getElementById('category')?.addEventListener('change', render);
+    }
+
+    // Expose slider functions to global scope
+    window.prevSlide = prevSlide;
+    window.nextSlide = nextSlide;
+    window.goToSlide = goToSlide;
+
+    window.addEventListener('hashchange', render);
+    window.toggleFavorite = toggleFavorite;
+    render();
+  </script>
+</body>
+</html>
