@@ -11,12 +11,23 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&display=swap" rel="stylesheet">
   <style>
     body { background: linear-gradient(to bottom, #1a202c, #2d3748); color: #e2e8f0; }
-    video { width: 100%; max-width: 1200px; height: auto; aspect-ratio: 16/9; }
+    video { 
+      width: 100%; 
+      max-width: 1200px; 
+      height: auto; 
+      aspect-ratio: 16/9; 
+      display: block; 
+      margin: 0 auto;
+    }
     .channel-card, .anime-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-    .channel-card:hover, .anime-card:hover { transform: scale(1.05); box-shadow: 0 8px 16px rgba(153, 8, 8, 0); }
+    .channel-card:hover, .anime-card:hover { transform: scale(1.05); box-shadow: 0 8px 16px rgba(153, 8, 8, 0.2); }
     .page-transition { animation: fadeIn 0.5s ease-in; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .hero-bg { background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://i.fod.fujitv.co.jp/website/img/top/mv_logout_sp.png'); }
+    .hero-bg { 
+      background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://i.fod.fujitv.co.jp/website/img/top/mv_logout_sp.png'); 
+      background-size: cover; 
+      background-position: center;
+    }
     .subtitle-overlay {
       position: absolute;
       top: 0;
@@ -27,32 +38,90 @@
       padding: 8px;
       border-radius: 4px;
       font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 25px;
+      font-size: clamp(16px, 5vw, 20px);
       font-weight: 900;
       color: #ffffff;
-      -webkit-text-stroke: 6px #000000;
+      -webkit-text-stroke: 2px #000000;
     }
-    .schedule-table { width: 100%; border-collapse: collapse; }
-    .schedule-table th, .schedule-table td { border: 1px solid #4a5568; padding: 8px; text-align: left; }
+    .schedule-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: clamp(12px, 3vw, 14px);
+    }
+    .schedule-table th, .schedule-table td { 
+      border: 1px solid #4a5568; 
+      padding: 8px; 
+      text-align: left;
+    }
     .schedule-table th { background: #2d3748; }
     .schedule-table tr:hover { background: #4a5568; }
-    @media (max-width: 640px) { video { max-width: 100%; } .hero-bg { background-size: cover; } }
-    
+
+    /* Navbar styles */
+    .nav-menu {
+      transition: transform 0.3s ease-in-out;
+    }
+    .nav-menu.hidden {
+      transform: translateX(100%);
+    }
+    .hamburger {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .hamburger {
+        display: block;
+        cursor: pointer;
+      }
+      .nav-menu {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 75%;
+        max-width: 300px;
+        background: #1a202c;
+        padding: 2rem;
+        z-index: 20;
+      }
+      .nav-menu.hidden {
+        display: none;
+      }
+      .nav-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10;
+        display: none;
+      }
+      .nav-overlay.active {
+        display: block;
+      }
+    }
+
     /* Slider styles */
     .slider-container {
       position: relative;
       width: 100%;
       overflow: hidden;
       margin-bottom: 2rem;
+      touch-action: pan-y;
     }
     .slider {
       display: flex;
       transition: transform 0.5s ease;
+      will-change: transform;
     }
     .slider-item {
       min-width: 200px;
       margin-right: 1rem;
       flex: 0 0 auto;
+    }
+    @media (max-width: 640px) {
+      .slider-item {
+        min-width: 150px;
+      }
     }
     .slider-nav {
       position: absolute;
@@ -95,16 +164,55 @@
     .slider-dot.active {
       background: #e53e3e;
     }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+      .hero-bg {
+        height: 60vw;
+      }
+      .hero-bg h1 {
+        font-size: 1.5rem;
+      }
+      .hero-bg p {
+        font-size: 0.875rem;
+      }
+      video {
+        max-width: 100%;
+      }
+    }
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+      .channel-card img {
+        height: 80px;
+      }
+      .anime-card img {
+        height: 120px;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen">
   <nav class="sticky top-0 bg-gray-900 shadow-lg z-10">
     <div class="container mx-auto px-4 py-3 flex items-center justify-between">
       <a href="#" class="text-2xl font-bold text-red-500">ネコストリーム</a>
-      <div class="flex items-center space-x-4">
-        <a href="#page=anime" class="text-white hover:text-red-500">Anime</a>
-        <input type="text" id="search" placeholder="Search channels..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500">
-        <select id="category" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none">
+      <button class="hamburger md:hidden" onclick="toggleMenu()">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <div class="nav-menu hidden md:flex md:items-center md:space-x-4 fixed md:static top-0 right-0 h-full md:h-auto bg-gray-900 md:bg-transparent p-6 md:p-0 z-20">
+        <a href="#page=anime" class="text-white hover:text-red-500 block md:inline-block mb-4 md:mb-0">Anime</a>
+        <input type="text" id="search" placeholder="Search channels..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500 w-full md:w-auto mb-4 md:mb-0">
+        <select id="category" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none w-full md:w-auto">
           <option value="">All Categories</option>
           <option value="Favorites">Favorites</option>
           <option value="Tokyo">Tokyo</option>
@@ -116,46 +224,54 @@
       </div>
     </div>
   </nav>
+  <div class="nav-overlay" onclick="toggleMenu()"></div>
   <div id="app" class="container mx-auto px-4 py-6"></div>
 
   <script>
+    function toggleMenu() {
+      const menu = document.querySelector('.nav-menu');
+      const overlay = document.querySelector('.nav-overlay');
+      menu.classList.toggle('hidden');
+      overlay.classList.toggle('active');
+    }
+
     const channels = [
-      { group: "Tokyo", tvgId: "nhkg_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/NHK%E7%B7%8F%E5%90%88%E3%83%AD%E3%82%B42020-.png", name: "NHK G", url: "http://vthanh.utako.moe/NHK_G/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/program/" },
-      { group: "Tokyo", tvgId: "nhke_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/a/aa/NHKE%E3%83%86%E3%83%AC%E3%83%AD%E3%82%B42020-.png", name: "NHK E", url: "http://vthanh.utako.moe/NHK_E/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/school/program/" },
-      { group: "Tokyo", tvgId: "ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nippon_TV_logo_2014.svg/2560px-Nippon_TV_logo_2014.svg.png", name: "NTV", url: "http://vthanh.utako.moe/Nippon_TV/index.m3u8", scheduleUrl: "https://www.ntv.co.jp/schedule/" },
-      { group: "Tokyo", tvgId: "tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Tokyo_Broadcasting_System_logo_2020.svg/2560px-Tokyo_Broadcasting_System_logo_2020.svg.png", name: "TBS", url: "http://vthanh.utako.moe/TBS/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tv/" },
-      { group: "Tokyo", tvgId: "fuji_tv", logo: "https://upload.wikimedia.org/wikipedia/fr/thumb/6/65/Fuji_TV_Logo.svg/1049px-Fuji_TV_Logo.svg.png", name: "Fuji TV", url: "http://vthanh.utako.moe/Fuji_TV/index.m3u8", scheduleUrl: "https://www.fujitv.co.jp/timetable/" },
-      { group: "Tokyo", tvgId: "tv_asahi", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/TV_Asahi_Logo.svg/2560px-TV_Asahi_Logo.svg.png", name: "TV Asahi", url: "http://vthanh.utako.moe/TV_Asahi/index.m3u8", scheduleUrl: "https://www.tv-asahi.co.jp/bangumi/" },
-      { group: "Tokyo", tvgId: "tv_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/TV_Tokyo_logo_2023.svg/2560px-TV_Tokyo_logo_2023.svg.png", name: "TV Tokyo", url: "http://vthanh.utako.moe/TV_Tokyo/index.m3u8", scheduleUrl: "https://www.tv-tokyo.co.jp/timetable/" },
-      { group: "Tokyo", tvgId: "tokyo_mx", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Tokyo_metropolitan_television_logo_%28rainbow%29.svg/2560px-Tokyo_metropolitan_television_logo_%28rainbow%29.svg.png", name: "TOKYO MX1", url: "http://vthanh.utako.moe/Tokyo_MX1/index.m3u8", scheduleUrl: "https://s.mxtv.jp/bangumi/" },
-      { group: "Kansai", tvgId: "mbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Mainichi_Broadcasting_System_logo.svg/1920px-Mainichi_Broadcasting_System_logo.svg.png", name: "MBS", url: "http://luong.utako.moe/mbs/index.m3u8", scheduleUrl: "https://www.mbs.jp/schedule/" },
-      { group: "Kansai", tvgId: "abc", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Asahi_Broadcasting_Corporation_Logo.svg/261px-Asahi_Broadcasting_Corporation_Logo.svg.png", name: "ABC", url: "http://luong.utako.moe/abc/index.m3u8", scheduleUrl: "https://www.asahi.co.jp/timetable/" },
-      { group: "Kansai", tvgId: "tv_osaka", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Tv_osaka_logo.svg/178px-Tv_osaka_logo.svg.png", name: "TV Osaka", url: "http://luong.utako.moe/tvo/index.m3u8", scheduleUrl: "https://www.tv-osaka.co.jp/onair/" },
-      { group: "Kansai", tvgId: "kansai_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Ktv_logo.svg/200px-Ktv_logo.svg.png", name: "Kansai TV", url: "http://luong.utako.moe/kansaitv/index.m3u8", scheduleUrl: "https://www.ktv.jp/timetable/" },
-      { group: "Kansai", tvgId: "ytv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Yomiuri_Telecasting_Corporation_Logo.svg/150px-Yomiuri_Telecasting_Corporation_Logo.svg.png", name: "ytv", url: "http://luong.utako.moe/ytv/index.m3u8", scheduleUrl: "https://www.ytv.co.jp/timetable/" },
-      { group: "Kansai", tvgId: "kbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Kbs_logo.svg/250px-Kbs_logo.svg.png", name: "KBS", url: "http://luong.utako.moe/kbs/index.m3u8", scheduleUrl: "https://www.kbs-kyoto.co.jp/tv/timetable/" },
-      { group: "Kansai", tvgId: "sun_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/SUN-TV_wordmark_2019.png/180px-SUN-TV_wordmark_2019.png", name: "SUN", url: "http://luong.utako.moe/suntv/index.m3u8", scheduleUrl: "https://www.sun-tv.co.jp/program" },
-      { group: "BS", tvgId: "nhk_bs", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/NHK_BS.png", name: "NHK BS", url: "http://vthanh.utako.moe/NHK_BS/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs/" },
-      { group: "BS", tvgId: "animax", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Animax.svg/1920px-Animax.svg.png", name: "Animax", url: "http://vthanh.utako.moe/Animax/index.m3u8", scheduleUrl: "https://www.animax.co.jp/schedule/" },
-      { group: "BS", tvgId: "BS11.jp", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/BS11_logo.svg/2560px-BS11_logo.svg.png", name: "BS11", url: "http://vthanh.utako.moe/BS11/index.m3u8", scheduleUrl: "https://www.bs11.jp/program/" },
-      { group: "BS2", tvgId: "nhk_bsp4k", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/NHK_BSP4K_2023_logo.svg/1920px-NHK_BSP4K_2023_logo.svg.png", name: "NHK BS4K", url: "http://luong.utako.moe/bsp4k/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs4k/" },
-      { group: "BS2", tvgId: "bs_ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/BS4_logo.svg/2560px-BS4_logo.svg.png", name: "BS NTV", url: "http://luong.utako.moe/bsntv/index.m3u8", scheduleUrl: "https://www.bs4.jp/timetable/" },
-      { group: "BS2", tvgId: "bs_asahi", logo: "https://www.bs-asahi.co.jp/wp-content/uploads/2021/06/oglogo.jpg", name: "BS Asahi", url: "http://luong.utako.moe/bsasahi/index.m3u8", scheduleUrl: "https://www.bs-asahi.co.jp/schedule/" },
-      { group: "BS2", tvgId: "bs_tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/BS-TBS_2020.svg/1920px-BS-TBS_2020.svg.png", name: "BS TBS", url: "http://luong.utako.moe/bstbs/index.m3u8", scheduleUrl: "https://www.bstbs.co.jp/timetable/" },
-      { group: "BS2", tvgId: "bs_tvtokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/BS_TV_Tokyo_%28Japanese%29_2023.svg/1920px-BS_TV_Tokyo_%28Japanese%29_2023.svg.png", name: "BS TV Tokyo", url: "http://luong.utako.moe/bstvtokyo/index.m3u8", scheduleUrl: "https://www.bs-tvtokyo.co.jp/timetable/" },
-      { group: "BS2", tvgId: "bs_fuji", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/74/BSFuji2008Symbol.svg/1280px-BSFuji2008Symbol.svg.png", name: "BS Fuji", url: "http://luong.utako.moe/bsfuji/index.m3u8", scheduleUrl: "https://www.bsfuji.tv/schedule/" },
-      { group: "BS2", tvgId: "wowow_prime", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_prime.png", name: "WOWOW Prime", url: "http://luong.utako.moe/wprime/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
-      { group: "BS2", tvgId: "wowow_cinema", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_cinema.png", name: "WOWOW Cinema", url: "http://luong.utako.moe/wcinema/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
-      { group: "BS2", tvgId: "wowow_live", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_live.png", name: "WOWOW Live", url: "http://luong.utako.moe/wlive/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
-      { group: "BS2", tvgId: "js1", logo: "https://www.starcat.co.jp/ch/upload/channel/69/jsports1_logo.jpg", name: "JSport 1", url: "http://luong.utako.moe/js1/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "BS2", tvgId: "js2", logo: "https://www.starcat.co.jp/ch/upload/channel/70/jsports2_logo.jpg", name: "JSport 2", url: "http://luong.utako.moe/js2/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "BS2", tvgId: "js3", logo: "https://www.starcat.co.jp/ch/upload/channel/71/jsports3_logo.jpg", name: "JSport 3", url: "http://luong.utako.moe/js3/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "BS2", tvgId: "js4", logo: "https://www.starcat.co.jp/ch/upload/channel/74/jsports4_logo.jpg", name: "JSport 4", url: "http://luong.utako.moe/js4/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "CS", tvgId: "at-x", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/AT-X_logo.svg/2560px-AT-X_logo.svg.png", name: "AT-X", url: "http://vthanh.utako.moe/AT-X/index.m3u8", scheduleUrl: "https://www.at-x.com/program/" },
+      { group: "Tokyo", tvgId: "nhkg_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/NHK%E7%B7%8F%E5%90%88%E3%83%AD%E3%82%B42020-.png", name: "NHK G", url: "https://vthanh.utako.moe/NHK_G/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/program/" },
+      { group: "Tokyo", tvgId: "nhke_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/a/aa/NHKE%E3%83%86%E3%83%AC%E3%83%AD%E3%82%B42020-.png", name: "NHK E", url: "https://vthanh.utako.moe/NHK_E/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/school/program/" },
+      { group: "Tokyo", tvgId: "ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nippon_TV_logo_2014.svg/2560px-Nippon_TV_logo_2014.svg.png", name: "NTV", url: "https://vthanh.utako.moe/Nippon_TV/index.m3u8", scheduleUrl: "https://www.ntv.co.jp/schedule/" },
+      { group: "Tokyo", tvgId: "tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Tokyo_Broadcasting_System_logo_2020.svg/2560px-Tokyo_Broadcasting_System_logo_2020.svg.png", name: "TBS", url: "https://vthanh.utako.moe/TBS/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tv/" },
+      { group: "Tokyo", tvgId: "fuji_tv", logo: "https://upload.wikimedia.org/wikipedia/fr/thumb/6/65/Fuji_TV_Logo.svg/1049px-Fuji_TV_Logo.svg.png", name: "Fuji TV", url: "https://vthanh.utako.moe/Fuji_TV/index.m3u8", scheduleUrl: "https://www.fujitv.co.jp/timetable/" },
+      { group: "Tokyo", tvgId: "tv_asahi", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/TV_Asahi_Logo.svg/2560px-TV_Asahi_Logo.svg.png", name: "TV Asahi", url: "https://vthanh.utako.moe/TV_Asahi/index.m3u8", scheduleUrl: "https://www.tv-asahi.co.jp/bangumi/" },
+      { group: "Tokyo", tvgId: "tv_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/TV_Tokyo_logo_2023.svg/2560px-TV_Tokyo_logo_2023.svg.png", name: "TV Tokyo", url: "https://vthanh.utako.moe/TV_Tokyo/index.m3u8", scheduleUrl: "https://www.tv-tokyo.co.jp/timetable/" },
+      { group: "Tokyo", tvgId: "tokyo_mx", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Tokyo_metropolitan_television_logo_%28rainbow%29.svg/2560px-Tokyo_metropolitan_television_logo_%28rainbow%29.svg.png", name: "TOKYO MX1", url: "https://vthanh.utako.moe/Tokyo_MX1/index.m3u8", scheduleUrl: "https://s.mxtv.jp/bangumi/" },
+      { group: "Kansai", tvgId: "mbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Mainichi_Broadcasting_System_logo.svg/1920px-Mainichi_Broadcasting_System_logo.svg.png", name: "MBS", url: "https://luong.utako.moe/mbs/index.m3u8", scheduleUrl: "https://www.mbs.jp/schedule/" },
+      { group: "Kansai", tvgId: "abc", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Asahi_Broadcasting_Corporation_Logo.svg/261px-Asahi_Broadcasting_Corporation_Logo.svg.png", name: "ABC", url: "https://luong.utako.moe/abc/index.m3u8", scheduleUrl: "https://www.asahi.co.jp/timetable/" },
+      { group: "Kansai", tvgId: "tv_osaka", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Tv_osaka_logo.svg/178px-Tv_osaka_logo.svg.png", name: "TV Osaka", url: "https://luong.utako.moe/tvo/index.m3u8", scheduleUrl: "https://www.tv-osaka.co.jp/onair/" },
+      { group: "Kansai", tvgId: "kansai_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Ktv_logo.svg/200px-Ktv_logo.svg.png", name: "Kansai TV", url: "https://luong.utako.moe/kansaitv/index.m3u8", scheduleUrl: "https://www.ktv.jp/timetable/" },
+      { group: "Kansai", tvgId: "ytv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Yomiuri_Telecasting_Corporation_Logo.svg/150px-Yomiuri_Telecasting_Corporation_Logo.svg.png", name: "ytv", url: "https://luong.utako.moe/ytv/index.m3u8", scheduleUrl: "https://www.ytv.co.jp/timetable/" },
+      { group: "Kansai", tvgId: "kbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Kbs_logo.svg/250px-Kbs_logo.svg.png", name: "KBS", url: "https://luong.utako.moe/kbs/index.m3u8", scheduleUrl: "https://www.kbs-kyoto.co.jp/tv/timetable/" },
+      { group: "Kansai", tvgId: "sun_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/SUN-TV_wordmark_2019.png/180px-SUN-TV_wordmark_2019.png", name: "SUN", url: "https://luong.utako.moe/suntv/index.m3u8", scheduleUrl: "https://www.sun-tv.co.jp/program" },
+      { group: "BS", tvgId: "nhk_bs", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/NHK_BS.png", name: "NHK BS", url: "https://vthanh.utako.moe/NHK_BS/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs/" },
+      { group: "BS", tvgId: "animax", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Animax.svg/1920px-Animax.svg.png", name: "Animax", url: "https://vthanh.utako.moe/Animax/index.m3u8", scheduleUrl: "https://www.animax.co.jp/schedule/" },
+      { group: "BS", tvgId: "BS11.jp", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/BS11_logo.svg/2560px-BS11_logo.svg.png", name: "BS11", url: "https://vthanh.utako.moe/BS11/index.m3u8", scheduleUrl: "https://www.bs11.jp/program/" },
+      { group: "BS2", tvgId: "nhk_bsp4k", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/NHK_BSP4K_2023_logo.svg/1920px-NHK_BSP4K_2023_logo.svg.png", name: "NHK BS4K", url: "https://luong.utako.moe/bsp4k/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs4k/" },
+      { group: "BS2", tvgId: "bs_ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/BS4_logo.svg/2560px-BS4_logo.svg.png", name: "BS NTV", url: "https://luong.utako.moe/bsntv/index.m3u8", scheduleUrl: "https://www.bs4.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_asahi", logo: "https://www.bs-asahi.co.jp/wp-content/uploads/2021/06/oglogo.jpg", name: "BS Asahi", url: "https://luong.utako.moe/bsasahi/index.m3u8", scheduleUrl: "https://www.bs-asahi.co.jp/schedule/" },
+      { group: "BS2", tvgId: "bs_tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/BS-TBS_2020.svg/1920px-BS-TBS_2020.svg.png", name: "BS TBS", url: "https://luong.utako.moe/bstbs/index.m3u8", scheduleUrl: "https://www.bstbs.co.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_tvtokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/BS_TV_Tokyo_%28Japanese%29_2023.svg/1920px-BS_TV_Tokyo_%28Japanese%29_2023.svg.png", name: "BS TV Tokyo", url: "https://luong.utako.moe/bstvtokyo/index.m3u8", scheduleUrl: "https://www.bs-tvtokyo.co.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_fuji", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/74/BSFuji2008Symbol.svg/1280px-BSFuji2008Symbol.svg.png", name: "BS Fuji", url: "https://luong.utako.moe/bsfuji/index.m3u8", scheduleUrl: "https://www.bsfuji.tv/schedule/" },
+      { group: "BS2", tvgId: "wowow_prime", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_prime.png", name: "WOWOW Prime", url: "https://luong.utako.moe/wprime/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "wowow_cinema", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_cinema.png", name: "WOWOW Cinema", url: "https://luong.utako.moe/wcinema/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "wowow_live", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_live.png", name: "WOWOW Live", url: "https://luong.utako.moe/wlive/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "js1", logo: "https://www.starcat.co.jp/ch/upload/channel/69/jsports1_logo.jpg", name: "JSport 1", url: "https://luong.utako.moe/js1/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js2", logo: "https://www.starcat.co.jp/ch/upload/channel/70/jsports2_logo.jpg", name: "JSport 2", url: "https://luong.utako.moe/js2/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js3", logo: "https://www.starcat.co.jp/ch/upload/channel/71/jsports3_logo.jpg", name: "JSport 3", url: "https://luong.utako.moe/js3/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js4", logo: "https://www.starcat.co.jp/ch/upload/channel/74/jsports4_logo.jpg", name: "JSport 4", url: "https://luong.utako.moe/js4/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "CS", tvgId: "at-x", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/AT-X_logo.svg/2560px-AT-X_logo.svg.png", name: "AT-X", url: "https://vthanh.utako.moe/AT-X/index.m3u8", scheduleUrl: "https://www.at-x.com/program/" },
       { group: "CS", tvgId: "qvc", logo: "https://brandlogos.net/wp-content/uploads/2012/12/qvc-logo-vector-400x400.png", name: "QVC", url: "https://cdn-live1.qvc.jp/iPhone/1501/1501.m3u8", scheduleUrl: "https://qvc.jp/content/shop/schedule.html" },
-      { group: "CS", tvgId: "space_shower", logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/SPACE_SHOWER_TV.jpg", name: "Space Shower TV", url: "http://luong.utako.moe/spaceshower/index.m3u8", scheduleUrl: "https://www.spaceshowertv.com/program/" },
-      { group: "CS", tvgId: "tbs_ch1", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-1-jp.png", name: "TBS Channel 1", url: "http://luong.utako.moe/tbsch1/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" },
-      { group: "CS", tvgId: "tbs_ch2", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-2-jp.png", name: "TBS Channel 2", url: "http://luong.utako.moe/tbsch2/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" }
+      { group: "CS", tvgId: "space_shower", logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/SPACE_SHOWER_TV.jpg", name: "Space Shower TV", url: "https://luong.utako.moe/spaceshower/index.m3u8", scheduleUrl: "https://www.spaceshowertv.com/program/" },
+      { group: "CS", tvgId: "tbs_ch1", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-1-jp.png", name: "TBS Channel 1", url: "https://luong.utako.moe/tbsch1/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" },
+      { group: "CS", tvgId: "tbs_ch2", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-2-jp.png", name: "TBS Channel 2", url: "https://luong.utako.moe/tbsch2/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" }
     ];
 
     const featuredChannels = ['animax', 'at-x', 'nhkg_tokyo', 'tokyo_mx'];
@@ -164,100 +280,99 @@
     let recognition = null;
     let subtitleTimeout = null;
 
- // Anime data for 2025 releases with thumbnails
-// Anime data for 2025 releases with thumbnails
-const animeReleases2025 = [
-  { title: "Kamitsubaki City Under Construction", premiere: "July 2025", thumbnail: "Images/kami02.jpg" },
-  { title: "Dandadan Season 2", premiere: "July 2025", thumbnail: "Images/new-dandadan-season-2-key-visual-v0-fl44zyv1xmse1.jpg" },
-  { title: "City the Animation", premiere: "July 2025", thumbnail: "Images/city-anime-announced-lets-fucking-gooooooooooooooooo-v0-63zdnwg2m5qd1.jpg" },
-  { title: "Grand Blue Dreaming Season 2", premiere: "July 2025", thumbnail: "Images/Grand-Blue-Season-2.jpg" },
-  { title: "Solo Camping for Two", premiere: "July 2025", thumbnail: "Images/solo_camping_for_two_teaser_art.jpg" },
-  { title: "A Couple of Cuckoos Season 2", premiere: "July 2025", thumbnail: "Images/filters_quality(95)format(webp).jpg" },
-  { title: "Apocalypse Bringer Mynoghra", premiere: "July 2025", thumbnail: "Images/apocalypse-bringer-mynoghra-header.jpg" },
-  { title: "April Showers Bring May Flowers", premiere: "July 2025", thumbnail: "https://booklive.jp/product/index/title_id/407634/vol_no/001" },
-  { title: "Bad Girl", premiere: "July 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/3/27/badgirl-anime-trailer-key-visual-additional-cast" },
-  { title: "Betrothed to My Sister's Ex", premiere: "July 2025", thumbnail: "https://www.imdb.com/news/ni65024437/" },
-  { title: "Call of the Night Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1123/123465.jpg" },
-  { title: "Captivated, by You", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1567/123466.jpg" },
-  { title: "Clevatess: Majū no Ō to Akago to Shikabane no Yūsha", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1345/123467.jpg" },
-  { title: "Cultural Exchange with Game Center Girl", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1893/123468.jpg" },
-  { title: "Dekin no Mogura", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1568/123469.jpg" },
-  { title: "Dr. Stone: Science Future Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1346/123470.jpg" },
-  { title: "Fermat no Ryōri", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1780/123471.jpg" },
-  { title: "Gachiakuta", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1124/123472.jpg" },
-  { title: "Hell Teacher: Jigoku Sensei Nube", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1457/123473.jpg" },
-  { title: "Hitozuma no Kuchibiru wa Kan Chūhai no Aji ga Shite", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1894/123474.jpg" },
-  { title: "Hotel Inhumans", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1569/123475.jpg" },
-  { title: "I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1347/123476.jpg" },
-  { title: "Kaiju No. 8 Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1781/123477.jpg" },
-  { title: "Kizetsu Yūsha to Ansatsu Hime", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1125/123478.jpg" },
-  { title: "Let's Go Karaoke!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1458/123479.jpg" },
-  { title: "Mikadono Sanshimai wa Angai, Choroi", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1895/123480.jpg" },
-  { title: "Mr. Osomatsu Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1570/123481.jpg" },
-  { title: "My Dress-Up Darling Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1348/123482.jpg" },
-  { title: "New Panty & Stocking with Garterbelt", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1782/123483.jpg" },
-  { title: "Necronomico no Cosmic Horror Show", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1126/123484.jpg" },
-  { title: "New Saga", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1459/123485.jpg" },
-  { title: "Night of the Living Cat", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1896/123486.jpg" },
-  { title: "Onmyō Kaiten Re:verse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1571/123487.jpg" },
-  { title: "Private Tutor to the Duke's Daughter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1349/123488.jpg" },
-  { title: "Rascal Does Not Dream of Santa Claus", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1783/123489.jpg" },
-  { title: "Reincarnated as a Neglected Noble: Raising My Baby Brother with Memories from My Past Life", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1127/123490.jpg" },
-  { title: "Rent-A-Girlfriend Season 4 Part 1", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1460/123491.jpg" },
-  { title: "Sakamoto Days Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1897/123492.jpg" },
-  { title: "Secrets of the Silent Witch", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1572/123493.jpg" },
-  { title: "The Fragrant Flower Blooms with Dignity", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1350/123494.jpg" },
-  { title: "The Rising of the Shield Hero Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1784/123495.jpg" },
-  { title: "The Water Magician", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1128/123496.jpg" },
-  { title: "There's No Freaking Way I'll be Your Lover! Unless...", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1461/123497.jpg" },
-  { title: "Tougen Anki: Legend of the Cursed Blood", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1898/123498.jpg" },
-  { title: "Turkey!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1573/123499.jpg" },
-  { title: "Uglymug, Epicfighter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1351/123500.jpg" },
-  { title: "Utagoe wa Mille-Feuille", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1785/123501.jpg" },
-  { title: "Watari-kun's ****** Is About to Collapse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1129/123502.jpg" },
-  { title: "Welcome to the Outcast's Restaurant!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1462/123503.jpg" },
-  { title: "With You and the Rain", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1899/123504.jpg" },
-  { title: "Yūsha Party o Tsuihō Sareta Shiro Madōshi, S-Rank Bōkensha ni Hirowareru", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1574/123505.jpg" },
-  { title: "3-Nen Z-Gumi Ginpachi-Sensei", premiere: "October 2025", thumbnail: "https://i.ebayimg.com/images/g/7BQAAOSw5cNYb47q/s-l1600.jpg" },
-  { title: "A Wild Last Boss Appeared!", premiere: "October 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/2/10/a-wild-last-boss-appeared-anime-teaser-trailer-visual-october-2025-premiere" },
-  { title: "Digimon Beatbreak", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1130/123508.jpg" },
-  { title: "Egao no Taenai Shokuba Desu", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1463/123509.jpg" },
-  { title: "Gnosia", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1900/123510.jpg" },
-  { title: "Kingdom Season 6", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1575/123511.jpg" },
-  { title: "Let This Grieving Soul Retire! Season 2", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1353/123512.jpg" },
-  { title: "My Friend's Little Sister Has It In for Me!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1787/123513.jpg" },
-  { title: "My Hero Academia Season 8", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1131/123514.jpg" },
-  { title: "My Status as an Assassin Obviously Exceeds the Hero's", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1464/123515.jpg" },
-  { title: "Nohara Hiroshi Hirumeshi no Ryūgi", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1901/123516.jpg" },
-  { title: "One-Punch Man Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1576/123517.jpg" },
-  { title: "Pass the Monster Meat, Milady!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1354/123518.jpg" },
-  { title: "Sentenced to Be a Hero", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1788/123519.jpg" },
-  { title: "Spy × Family Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1132/123520.jpg" },
-  { title: "The Banished Court Magician Aims to Become the Strongest", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1465/123521.jpg" },
-  { title: "This Monster Wants to Eat Me", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1902/123522.jpg" }
-];
+    // Anime data for 2025 releases with thumbnails
+    const animeReleases2025 = [
+      { title: "Kamitsubaki City Under Construction", premiere: "July 2025", thumbnail: "Images/kami02.jpg" },
+      { title: "Dandadan Season 2", premiere: "July 2025", thumbnail: "Images/new-dandadan-season-2-key-visual-v0-fl44zyv1xmse1.jpg" },
+      { title: "City the Animation", premiere: "July 2025", thumbnail: "Images/city-anime-announced-lets-fucking-gooooooooooooooooo-v0-63zdnwg2m5qd1.jpg" },
+      { title: "Grand Blue Dreaming Season 2", premiere: "July 2025", thumbnail: "Images/Grand-Blue-Season-2.jpg" },
+      { title: "Solo Camping for Two", premiere: "July 2025", thumbnail: "Images/solo_camping_for_two_teaser_art.jpg" },
+      { title: "A Couple of Cuckoos Season 2", premiere: "July 2025", thumbnail: "Images/filters_quality(95)format(webp).jpg" },
+      { title: "Apocalypse Bringer Mynoghra", premiere: "July 2025", thumbnail: "Images/apocalypse-bringer-mynoghra-header.jpg" },
+      { title: "April Showers Bring May Flowers", premiere: "July 2025", thumbnail: "https://booklive.jp/product/index/title_id/407634/vol_no/001" },
+      { title: "Bad Girl", premiere: "July 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/3/27/badgirl-anime-trailer-key-visual-additional-cast" },
+      { title: "Betrothed to My Sister's Ex", premiere: "July 2025", thumbnail: "https://www.imdb.com/news/ni65024437/" },
+      { title: "Call of the Night Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1123/123465.jpg" },
+      { title: "Captivated, by You", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1567/123466.jpg" },
+      { title: "Clevatess: Majū no Ō to Akago to Shikabane no Yūsha", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1345/123467.jpg" },
+      { title: "Cultural Exchange with Game Center Girl", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1893/123468.jpg" },
+      { title: "Dekin no Mogura", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1568/123469.jpg" },
+      { title: "Dr. Stone: Science Future Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1346/123470.jpg" },
+      { title: "Fermat no Ryōri", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1780/123471.jpg" },
+      { title: "Gachiakuta", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1124/123472.jpg" },
+      { title: "Hell Teacher: Jigoku Sensei Nube", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1457/123473.jpg" },
+      { title: "Hitozuma no Kuchibiru wa Kan Chūhai no Aji ga Shite", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1894/123474.jpg" },
+      { title: "Hotel Inhumans", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1569/123475.jpg" },
+      { title: "I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1347/123476.jpg" },
+      { title: "Kaiju No. 8 Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1781/123477.jpg" },
+      { title: "Kizetsu Yūsha to Ansatsu Hime", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1125/123478.jpg" },
+      { title: "Let's Go Karaoke!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1458/123479.jpg" },
+      { title: "Mikadono Sanshimai wa Angai, Choroi", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1895/123480.jpg" },
+      { title: "Mr. Osomatsu Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1570/123481.jpg" },
+      { title: "My Dress-Up Darling Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1348/123482.jpg" },
+      { title: "New Panty & Stocking with Garterbelt", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1782/123483.jpg" },
+      { title: "Necronomico no Cosmic Horror Show", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1126/123484.jpg" },
+      { title: "New Saga", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1459/123485.jpg" },
+      { title: "Night of the Living Cat", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1896/123486.jpg" },
+      { title: "Onmyō Kaiten Re:verse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1571/123487.jpg" },
+      { title: "Private Tutor to the Duke's Daughter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1349/123488.jpg" },
+      { title: "Rascal Does Not Dream of Santa Claus", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1783/123489.jpg" },
+      { title: "Reincarnated as a Neglected Noble: Raising My Baby Brother with Memories from My Past Life", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1127/123490.jpg" },
+      { title: "Rent-A-Girlfriend Season 4 Part 1", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1460/123491.jpg" },
+      { title: "Sakamoto Days Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1897/123492.jpg" },
+      { title: "Secrets of the Silent Witch", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1572/123493.jpg" },
+      { title: "The Fragrant Flower Blooms with Dignity", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1350/123494.jpg" },
+      { title: "The Rising of the Shield Hero Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1784/123495.jpg" },
+      { title: "The Water Magician", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1128/123496.jpg" },
+      { title: "There's No Freaking Way I'll be Your Lover! Unless...", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1461/123497.jpg" },
+      { title: "Tougen Anki: Legend of the Cursed Blood", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1898/123498.jpg" },
+      { title: "Turkey!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1573/123499.jpg" },
+      { title: "Uglymug, Epicfighter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1351/123500.jpg" },
+      { title: "Utagoe wa Mille-Feuille", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1785/123501.jpg" },
+      { title: "Watari-kun's ****** Is About to Collapse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1129/123502.jpg" },
+      { title: "Welcome to the Outcast's Restaurant!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1462/123503.jpg" },
+      { title: "With You and the Rain", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1899/123504.jpg" },
+      { title: "Yūsha Party o Tsuihō Sareta Shiro Madōshi, S-Rank Bōkensha ni Hirowareru", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1574/123505.jpg" },
+      { title: "3-Nen Z-Gumi Ginpachi-Sensei", premiere: "October 2025", thumbnail: "https://i.ebayimg.com/images/g/7BQAAOSw5cNYb47q/s-l1600.jpg" },
+      { title: "A Wild Last Boss Appeared!", premiere: "October 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/2/10/a-wild-last-boss-appeared-anime-teaser-trailer-visual-october-2025-premiere" },
+      { title: "Digimon Beatbreak", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1130/123508.jpg" },
+      { title: "Egao no Taenai Shokuba Desu", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1463/123509.jpg" },
+      { title: "Gnosia", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1900/123510.jpg" },
+      { title: "Kingdom Season 6", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1575/123511.jpg" },
+      { title: "Let This Grieving Soul Retire! Season 2", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1353/123512.jpg" },
+      { title: "My Friend's Little Sister Has It In for Me!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1787/123513.jpg" },
+      { title: "My Hero Academia Season 8", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1131/123514.jpg" },
+      { title: "My Status as an Assassin Obviously Exceeds the Hero's", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1464/123515.jpg" },
+      { title: "Nohara Hiroshi Hirumeshi no Ryūgi", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1901/123516.jpg" },
+      { title: "One-Punch Man Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1576/123517.jpg" },
+      { title: "Pass the Monster Meat, Milady!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1354/123518.jpg" },
+      { title: "Sentenced to Be a Hero", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1788/123519.jpg" },
+      { title: "Spy × Family Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1132/123520.jpg" },
+      { title: "The Banished Court Magician Aims to Become the Strongest", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1465/123521.jpg" },
+      { title: "This Monster Wants to Eat Me", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1902/123522.jpg" }
+    ];
 
     // Ongoing anime schedule (Spring 2025, manually updated for mid-April 2025)
     const ongoingAnimeSchedule = [
       { title: "One Piece", channelId: "fuji_tv", day: "Sunday", timeJST: "09:30" },
-      { title: "Uchuujin MuuMuu", channelId: "at-x", day: "Friday", timeJST: "22:30" }, // Placeholder, re-added per prior request
-      { title: "Kingdom Season 5", channelId: "nhkg_tokyo", day: "Sunday", timeJST: "24:00" }, // Monday 00:00 JST
+      { title: "Uchuujin MuuMuu", channelId: "at-x", day: "Friday", timeJST: "22:30" },
+      { title: "Kingdom Season 5", channelId: "nhkg_tokyo", day: "Sunday", timeJST: "24:00" },
       { title: "Kaiju No. 8", channelId: "tv_tokyo", day: "Saturday", timeJST: "23:00" },
       { title: "Konosuba: An Explosion on This Wonderful World!", channelId: "tokyo_mx", day: "Wednesday", timeJST: "23:30" },
-      { title: "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", channelId: "tokyo_mx", day: "Sunday", timeJST: "24:30" }, // Monday 00:30 JST
+      { title: "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", channelId: "tokyo_mx", day: "Sunday", timeJST: "24:30" },
       { title: "Yuru Camp△ Season 3", channelId: "at-x", day: "Sunday", timeJST: "23:30" },
       { title: "A Sign of Affection", channelId: "tokyo_mx", day: "Saturday", timeJST: "22:30" },
-      { title: "Spice and Wolf: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" }, // Tuesday 01:30 JST
+      { title: "Spice and Wolf: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" },
       { title: "The Duke of Death and His Maid Season 3", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:00" },
-      { title: "Re:Monster", channelId: "tokyo_mx", day: "Monday", timeJST: "24:00" }, // Tuesday 00:00 JST
+      { title: "Re:Monster", channelId: "tokyo_mx", day: "Monday", timeJST: "24:00" },
       { title: "Unnamed Memory", channelId: "at-x", day: "Tuesday", timeJST: "23:30" },
       { title: "Black Butler: Public School Arc", channelId: "tokyo_mx", day: "Saturday", timeJST: "23:30" },
       { title: "Tonari no Youkai-san", channelId: "at-x", day: "Saturday", timeJST: "21:00" },
       { title: "Girls Band Cry", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:30" },
-      { title: "Kuramerukagari", channelId: "tokyo_mx", day: "Friday", timeJST: "25:05" }, // Saturday 01:05 JST
+      { title: "Kuramerukagari", channelId: "tokyo_mx", day: "Friday", timeJST: "25:05" },
       { title: "The Many Sides of Voice Actor Radio", channelId: "at-x", day: "Wednesday", timeJST: "23:00" },
-      { title: "Chiyu Mahou no Machigatta Tsukai-kata", channelId: "tokyo_mx", day: "Friday", timeJST: "24:30" }, // Saturday 00:30 JST
-      { title: "Ookami to Koshinryo: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" } // Tuesday 01:30 JST
+      { title: "Chiyu Mahou no Machigatta Tsukai-kata", channelId: "tokyo_mx", day: "Friday", timeJST: "24:30" },
+      { title: "Ookami to Koshinryo: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" }
     ];
 
     // Slider state
@@ -298,6 +413,28 @@ const animeReleases2025 = [
       initSlider();
     }
 
+    // Touch support for slider
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const sliderContainer = document.querySelector('.slider-container');
+      if (sliderContainer) {
+        sliderContainer.addEventListener('touchstart', (e) => {
+          touchStartX = e.changedTouches[0].screenX;
+        });
+
+        sliderContainer.addEventListener('touchend', (e) => {
+          touchEndX = e.changedTouches[0].screenX;
+          if (touchStartX - touchEndX > 50) {
+            nextSlide();
+          } else if (touchEndX - touchStartX > 50) {
+            prevSlide();
+          }
+        });
+      }
+    });
+
     // Fetch anime schedule from AniList (requires proxy/backend for CORS)
     async function fetchAnimeSchedule() {
       const query = `
@@ -326,7 +463,6 @@ const animeReleases2025 = [
           const date = new Date(airing.airingAt * 1000);
           const day = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' });
           const timeJST = date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' });
-          // Map to channels (simplified, requires backend for accurate mapping)
           const channelMap = {
             "One Piece": "fuji_tv",
             "Kingdom Season 5": "nhkg_tokyo",
@@ -350,14 +486,14 @@ const animeReleases2025 = [
           };
           return {
             title: item.title.romaji,
-            channelId: channelMap[item.title.romaji] || "tokyo_mx", // Fallback
+            channelId: channelMap[item.title.romaji] || "tokyo_mx",
             day,
             timeJST
           };
         }).filter(item => item);
       } catch (error) {
         console.error('AniList API error:', error);
-        return ongoingAnimeSchedule; // Fallback to static
+        return ongoingAnimeSchedule;
       }
     }
 
@@ -504,7 +640,6 @@ const animeReleases2025 = [
     }
 
     function renderAnimePage(animeSchedule = ongoingAnimeSchedule) {
-      // Group anime by premiere month
       const animeByMonth = animeReleases2025.reduce((acc, anime) => {
         const month = anime.premiere.split(' ')[0];
         if (!acc[month]) acc[month] = [];
@@ -512,7 +647,6 @@ const animeReleases2025 = [
         return acc;
       }, {});
       
-      // Calculate number of dots needed for slider
       const totalAnime = animeReleases2025.length;
       const dotsCount = Math.ceil(totalAnime / slidesPerView);
       
@@ -732,7 +866,7 @@ const animeReleases2025 = [
     async function render() {
       const hash = window.location.hash;
       const app = document.getElementById('app');
-      const animeSchedule = ongoingAnimeSchedule; // Static fallback
+      const animeSchedule = ongoingAnimeSchedule;
       if (hash.startsWith('#page=channel/')) {
         const tvgId = hash.split('#page=channel/')[1];
         app.innerHTML = renderChannel(tvgId);
@@ -753,7 +887,6 @@ const animeReleases2025 = [
         document.getElementById('autoplay-toggle')?.addEventListener('change', () => initAutoplay(tvgId));
       } else if (hash === '#page=anime') {
         app.innerHTML = renderAnimePage(animeSchedule);
-        // Initialize slider after DOM is rendered
         setTimeout(initSlider, 0);
       } else {
         app.innerHTML = renderHome();
@@ -762,13 +895,13 @@ const animeReleases2025 = [
       document.getElementById('category')?.addEventListener('change', render);
     }
 
-    // Expose slider functions to global scope
     window.prevSlide = prevSlide;
     window.nextSlide = nextSlide;
     window.goToSlide = goToSlide;
+    window.toggleFavorite = toggleFavorite;
+    window.toggleMenu = toggleMenu;
 
     window.addEventListener('hashchange', render);
-    window.toggleFavorite = toggleFavorite;
     render();
   </script>
 </body>
