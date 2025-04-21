@@ -268,6 +268,7 @@
       const channels = [];
       let currentChannel = null;
       const invalidIds = ['we_need_donations_to_maintain_the_server!', 'donate:_https://ko-fi.com/dinhluong'];
+      const problematicDomains = ['vthanh.utako.moe']; // Skip channels with invalid SSL certificates
 
       for (const line of lines) {
         if (line.startsWith('#EXTINF')) {
@@ -280,9 +281,15 @@
           const nameMatch = line.match(/,(.+)$/) || [];
           currentChannel.name = nameMatch[1] ? nameMatch[1].trim() : 'Unknown';
         } else if (line && !line.startsWith('#') && currentChannel) {
-          const url = line.replace(/^http:\/\//, 'https://');
+          let url = line.replace(/^http:\/\//, 'https://');
           const tvgId = currentChannel['tvg-id'] || currentChannel.name.toLowerCase().replace(/\s+/g, '_');
-          if (invalidIds.includes(tvgId) || url.includes('google.com') || url.includes('ko-fi.com')) {
+          if (
+            invalidIds.includes(tvgId) ||
+            url.includes('google.com') ||
+            url.includes('ko-fi.com') ||
+            problematicDomains.some(domain => url.includes(domain))
+          ) {
+            console.warn(`Skipping channel ${currentChannel.name} with URL ${url}`);
             currentChannel = null;
             continue;
           }
@@ -311,12 +318,16 @@
             'Accept': 'text/plain'
           }
         });
-        return parseM3U(response.data);
+        const channels = parseM3U(response.data);
+        if (!channels.length) {
+          throw new Error('No valid channels found in M3U playlist');
+        }
+        return channels;
       } catch (error) {
         console.error('Error fetching M3U playlist:', error);
         document.getElementById('app').innerHTML = `
           <div class="text-center text-red-500 page-transition">
-            Failed to load channel list. Please try again later.
+            Failed to load channel list. Some channels may be unavailable due to server issues. Please try again later.
           </div>
         `;
         return [];
@@ -846,12 +857,14 @@
     }
 
     function initHLS(video, url, tvgId) {
+      // Replace with your proxy server URL after deployment
+      const proxyUrl = `https://your-proxy-server.com/proxy-stream?url=${encodeURIComponent(url)}`;
       const loading = document.getElementById('loading');
       const error = document.getElementById('error');
       loading.classList.remove('hidden');
       if (Hls.isSupported()) {
         const hls = new Hls();
-        hls.loadSource(url);
+        hls.loadSource(proxyUrl); // Use proxy URL to bypass SSL issues
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           loading.classList.add('hidden');
@@ -860,7 +873,7 @@
         hls.on(Hls.Events.ERROR, (event, data) => {
           let errorMessage = 'Failed to load stream. Please try again later.';
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            errorMessage = 'Network error loading stream. Check your connection or try another channel.';
+            errorMessage = 'Network error: The stream server may have an invalid SSL certificate or is unreachable.';
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             errorMessage = 'Media error: The stream format may be unsupported.';
           }
@@ -869,13 +882,13 @@
           loading.classList.add('hidden');
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
+        video.src = proxyUrl;
         video.addEventListener('loadedmetadata', () => {
           loading.classList.add('hidden');
           initAutoplay(tvgId);
         });
         video.addEventListener('error', () => {
-          error.textContent = 'Failed to load stream. The stream may be unavailable or unsupported.';
+          error.textContent = 'Failed to load stream. The stream may be unavailable or have an invalid SSL certificate.';
           error.classList.remove('hidden');
           loading.classList.add('hidden');
         });
