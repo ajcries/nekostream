@@ -215,11 +215,6 @@
         <select id="category" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none w-full md:w-auto">
           <option value="">All Categories</option>
           <option value="Favorites">Favorites</option>
-          <option value="Tokyo">Tokyo</option>
-          <option value="Kansai">Kansai</option>
-          <option value="BS">BS</option>
-          <option value="BS2">BS2</option>
-          <option value="CS">CS</option>
         </select>
       </div>
     </div>
@@ -235,44 +230,101 @@
       overlay.classList.toggle('active');
     }
 
-    const channels = [
-      { group: "Tokyo", tvgId: "nhkg_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/NHK%E7%B7%8F%E5%90%88%E3%83%AD%E3%82%B42020-.png", name: "NHK G", url: "https://vthanh.utako.moe/NHK_G/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/program/" },
-      { group: "Tokyo", tvgId: "nhke_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/a/aa/NHKE%E3%83%86%E3%83%AC%E3%83%AD%E3%82%B42020-.png", name: "NHK E", url: "https://vthanh.utako.moe/NHK_E/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/school/program/" },
-      { group: "Tokyo", tvgId: "ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nippon_TV_logo_2014.svg/2560px-Nippon_TV_logo_2014.svg.png", name: "NTV", url: "https://vthanh.utako.moe/Nippon_TV/index.m3u8", scheduleUrl: "https://www.ntv.co.jp/schedule/" },
-      { group: "Tokyo", tvgId: "tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Tokyo_Broadcasting_System_logo_2020.svg/2560px-Tokyo_Broadcasting_System_logo_2020.svg.png", name: "TBS", url: "https://vthanh.utako.moe/TBS/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tv/" },
-      { group: "Tokyo", tvgId: "fuji_tv", logo: "https://upload.wikimedia.org/wikipedia/fr/thumb/6/65/Fuji_TV_Logo.svg/1049px-Fuji_TV_Logo.svg.png", name: "Fuji TV", url: "http://vthanh.utako.moe/Fuji_TV/index.m3u8", scheduleUrl: "https://www.fujitv.co.jp/timetable/" },
-      { group: "Tokyo", tvgId: "tv_asahi", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/TV_Asahi_Logo.svg/2560px-TV_Asahi_Logo.svg.png", name: "TV Asahi", url: "https://vthanh.utako.moe/TV_Asahi/index.m3u8", scheduleUrl: "https://www.tv-asahi.co.jp/bangumi/" },
-      { group: "Tokyo", tvgId: "tv_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/TV_Tokyo_logo_2023.svg/2560px-TV_Tokyo_logo_2023.svg.png", name: "TV Tokyo", url: "https://vthanh.utako.moe/TV_Tokyo/index.m3u8", scheduleUrl: "https://www.tv-tokyo.co.jp/timetable/" },
-      { group: "Tokyo", tvgId: "tokyo_mx", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Tokyo_metropolitan_television_logo_%28rainbow%29.svg/2560px-Tokyo_metropolitan_television_logo_%28rainbow%29.svg.png", name: "TOKYO MX1", url: "https://vthanh.utako.moe/Tokyo_MX1/index.m3u8", scheduleUrl: "https://s.mxtv.jp/bangumi/" },
-      { group: "Kansai", tvgId: "mbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Mainichi_Broadcasting_System_logo.svg/1920px-Mainichi_Broadcasting_System_logo.svg.png", name: "MBS", url: "https://luong.utako.moe/mbs/index.m3u8", scheduleUrl: "https://www.mbs.jp/schedule/" },
-      { group: "Kansai", tvgId: "abc", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Asahi_Broadcasting_Corporation_Logo.svg/261px-Asahi_Broadcasting_Corporation_Logo.svg.png", name: "ABC", url: "https://luong.utako.moe/abc/index.m3u8", scheduleUrl: "https://www.asahi.co.jp/timetable/" },
-      { group: "Kansai", tvgId: "tv_osaka", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Tv_osaka_logo.svg/178px-Tv_osaka_logo.svg.png", name: "TV Osaka", url: "https://luong.utako.moe/tvo/index.m3u8", scheduleUrl: "https://www.tv-osaka.co.jp/onair/" },
-      { group: "Kansai", tvgId: "kansai_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Ktv_logo.svg/200px-Ktv_logo.svg.png", name: "Kansai TV", url: "https://luong.utako.moe/kansaitv/index.m3u8", scheduleUrl: "https://www.ktv.jp/timetable/" },
-      { group: "Kansai", tvgId: "ytv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Yomiuri_Telecasting_Corporation_Logo.svg/150px-Yomiuri_Telecasting_Corporation_Logo.svg.png", name: "ytv", url: "https://luong.utako.moe/ytv/index.m3u8", scheduleUrl: "https://www.ytv.co.jp/timetable/" },
-      { group: "Kansai", tvgId: "kbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Kbs_logo.svg/250px-Kbs_logo.svg.png", name: "KBS", url: "https://luong.utako.moe/kbs/index.m3u8", scheduleUrl: "https://www.kbs-kyoto.co.jp/tv/timetable/" },
-      { group: "Kansai", tvgId: "sun_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/SUN-TV_wordmark_2019.png/180px-SUN-TV_wordmark_2019.png", name: "SUN", url: "https://luong.utako.moe/suntv/index.m3u8", scheduleUrl: "https://www.sun-tv.co.jp/program" },
-      { group: "BS", tvgId: "nhk_bs", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/NHK_BS.png", name: "NHK BS", url: "https://vthanh.utako.moe/NHK_BS/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs/" },
-      { group: "BS", tvgId: "animax", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Animax.svg/1920px-Animax.svg.png", name: "Animax", url: "https://vthanh.utako.moe/Animax/index.m3u8", scheduleUrl: "https://www.animax.co.jp/schedule/" },
-      { group: "BS", tvgId: "BS11.jp", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/BS11_logo.svg/2560px-BS11_logo.svg.png", name: "BS11", url: "https://vthanh.utako.moe/BS11/index.m3u8", scheduleUrl: "https://www.bs11.jp/program/" },
-      { group: "BS2", tvgId: "nhk_bsp4k", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/NHK_BSP4K_2023_logo.svg/1920px-NHK_BSP4K_2023_logo.svg.png", name: "NHK BS4K", url: "https://luong.utako.moe/bsp4k/index.m3u8", scheduleUrl: "https://www.nhk.or.jp/bs4k/" },
-      { group: "BS2", tvgId: "bs_ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/BS4_logo.svg/2560px-BS4_logo.svg.png", name: "BS NTV", url: "https://luong.utako.moe/bsntv/index.m3u8", scheduleUrl: "https://www.bs4.jp/timetable/" },
-      { group: "BS2", tvgId: "bs_asahi", logo: "https://www.bs-asahi.co.jp/wp-content/uploads/2021/06/oglogo.jpg", name: "BS Asahi", url: "https://luong.utako.moe/bsasahi/index.m3u8", scheduleUrl: "https://www.bs-asahi.co.jp/schedule/" },
-      { group: "BS2", tvgId: "bs_tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/BS-TBS_2020.svg/1920px-BS-TBS_2020.svg.png", name: "BS TBS", url: "https://luong.utako.moe/bstbs/index.m3u8", scheduleUrl: "https://www.bstbs.co.jp/timetable/" },
-      { group: "BS2", tvgId: "bs_tvtokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/BS_TV_Tokyo_%28Japanese%29_2023.svg/1920px-BS_TV_Tokyo_%28Japanese%29_2023.svg.png", name: "BS TV Tokyo", url: "https://luong.utako.moe/bstvtokyo/index.m3u8", scheduleUrl: "https://www.bs-tvtokyo.co.jp/timetable/" },
-      { group: "BS2", tvgId: "bs_fuji", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/74/BSFuji2008Symbol.svg/1280px-BSFuji2008Symbol.svg.png", name: "BS Fuji", url: "https://luong.utako.moe/bsfuji/index.m3u8", scheduleUrl: "https://www.bsfuji.tv/schedule/" },
-      { group: "BS2", tvgId: "wowow_prime", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_prime.png", name: "WOWOW Prime", url: "https://luong.utako.moe/wprime/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
-      { group: "BS2", tvgId: "wowow_cinema", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_cinema.png", name: "WOWOW Cinema", url: "https://luong.utako.moe/wcinema/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
-      { group: "BS2", tvgId: "wowow_live", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_live.png", name: "WOWOW Live", url: "https://luong.utako.moe/wlive/index.m3u8", scheduleUrl: "https://www.wowow.co.jp/schedule/" },
-      { group: "BS2", tvgId: "js1", logo: "https://www.starcat.co.jp/ch/upload/channel/69/jsports1_logo.jpg", name: "JSport 1", url: "https://luong.utako.moe/js1/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "BS2", tvgId: "js2", logo: "https://www.starcat.co.jp/ch/upload/channel/70/jsports2_logo.jpg", name: "JSport 2", url: "https://luong.utako.moe/js2/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "BS2", tvgId: "js3", logo: "https://www.starcat.co.jp/ch/upload/channel/71/jsports3_logo.jpg", name: "JSport 3", url: "https://luong.utako.moe/js3/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "BS2", tvgId: "js4", logo: "https://www.starcat.co.jp/ch/upload/channel/74/jsports4_logo.jpg", name: "JSport 4", url: "https://luong.utako.moe/js4/index.m3u8", scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
-      { group: "CS", tvgId: "at-x", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/AT-X_logo.svg/2560px-AT-X_logo.svg.png", name: "AT-X", url: "https://vthanh.utako.moe/AT-X/index.m3u8", scheduleUrl: "https://www.at-x.com/program/" },
-      { group: "CS", tvgId: "qvc", logo: "https://brandlogos.net/wp-content/uploads/2012/12/qvc-logo-vector-400x400.png", name: "QVC", url: "https://cdn-live1.qvc.jp/iPhone/1501/1501.m3u8", scheduleUrl: "https://qvc.jp/content/shop/schedule.html" },
-      { group: "CS", tvgId: "space_shower", logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/SPACE_SHOWER_TV.jpg", name: "Space Shower TV", url: "https://luong.utako.moe/spaceshower/index.m3u8", scheduleUrl: "https://www.spaceshowertv.com/program/" },
-      { group: "CS", tvgId: "tbs_ch1", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-1-jp.png", name: "TBS Channel 1", url: "https://luong.utako.moe/tbsch1/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" },
-      { group: "CS", tvgId: "tbs_ch2", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-2-jp.png", name: "TBS Channel 2", url: "https://luong.utako.moe/tbsch2/index.m3u8", scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" }
-    ];
+    // Schedule URL mapping for known channels
+    const scheduleUrls = {
+      "nhkg_tokyo": "https://www.nhk.or.jp/program/",
+      "nhke_tokyo": "https://www.nhk.or.jp/school/program/",
+      "ntv": "https://www.ntv.co.jp/schedule/",
+      "tbs": "https://www.tbs.co.jp/tv/",
+      "fuji_tv": "https://www.fujitv.co.jp/timetable/",
+      "tv_asahi": "https://www.tv-asahi.co.jp/bangumi/",
+      "tv_tokyo": "https://www.tv-tokyo.co.jp/timetable/",
+      "tokyo_mx": "https://s.mxtv.jp/bangumi/",
+      "mbs": "https://www.mbs.jp/schedule/",
+      "abc": "https://www.asahi.co.jp/timetable/",
+      "tv_osaka": "https://www.tv-osaka.co.jp/onair/",
+      "kansai_tv": "https://www.ktv.jp/timetable/",
+      "ytv": "https://www.ytv.co.jp/timetable/",
+      "kbs": "https://www.kbs-kyoto.co.jp/tv/timetable/",
+      "sun_tv": "https://www.sun-tv.co.jp/program",
+      "nhk_bs": "https://www.nhk.or.jp/bs/",
+      "animax": "https://www.animax.co.jp/schedule/",
+      "BS11.jp": "https://www.bs11.jp/program/",
+      "nhk_bsp4k": "https://www.nhk.or.jp/bs4k/",
+      "bs_ntv": "https://www.bs4.jp/timetable/",
+      "bs_asahi": "https://www.bs-asahi.co.jp/schedule/",
+      "bs_tbs": "https://www.bstbs.co.jp/timetable/",
+      "bs_tvtokyo": "https://www.bs-tvtokyo.co.jp/timetable/",
+      "bs_fuji": "https://www.bsfuji.tv/schedule/",
+      "wowow_prime": "https://www.wowow.co.jp/schedule/",
+      "wowow_cinema": "https://www.wowow.co.jp/schedule/",
+      "wowow_live": "https://www.wowow.co.jp/schedule/",
+      "js1": "https://www.jsports.co.jp/program_guide/",
+      "js2": "https://www.jsports.co.jp/program_guide/",
+      "js3": "https://www.jsports.co.jp/program_guide/",
+      "js4": "https://www.jsports.co.jp/program_guide/",
+      "at-x": "https://www.at-x.com/program/",
+      "qvc": "https://qvc.jp/content/shop/schedule.html",
+      "space_shower": "https://www.spaceshowertv.com/program/",
+      "tbs_ch1": "https://www.tbs.co.jp/tbschannel/schedule/",
+      "tbs_ch2": "https://www.tbs.co.jp/tbschannel/schedule/"
+    };
+
+    // Function to parse M3U content
+    function parseM3U(content) {
+      const lines = content.split('\n').map(line => line.trim());
+      const channels = [];
+      let currentChannel = null;
+
+      for (const line of lines) {
+        if (line.startsWith('#EXTINF')) {
+          currentChannel = {};
+          const attributes = line.match(/([a-zA-Z-]+)="([^"]+)"/g) || [];
+          attributes.forEach(attr => {
+            const [, key, value] = attr.match(/([a-zA-Z-]+)="([^"]+)"/);
+            currentChannel[key] = value;
+          });
+          const nameMatch = line.match(/,(.+)$/) || [];
+          currentChannel.name = nameMatch[1] ? nameMatch[1].trim() : 'Unknown';
+        } else if (line && !line.startsWith('#') && currentChannel) {
+          currentChannel.url = line;
+          channels.push({
+            group: currentChannel['group-title'] || 'Other',
+            tvgId: currentChannel['tvg-id'] || currentChannel.name.toLowerCase().replace(/\s+/g, '_'),
+            logo: currentChannel['tvg-logo'] || 'https://placehold.co/150x150?text=No+Logo',
+            name: currentChannel.name,
+            url: currentChannel.url,
+            scheduleUrl: scheduleUrls[currentChannel['tvg-id']] || ''
+          });
+          currentChannel = null;
+        }
+      }
+
+      return channels;
+    }
+
+    // Function to fetch and parse M3U playlist
+    async function fetchChannels() {
+      try {
+        const response = await axios.get('https://raw.githubusercontent.com/luongz/iptv-jp/refs/heads/main/jp.m3u', {
+          headers: {
+            'Accept': 'text/plain'
+          }
+        });
+        return parseM3U(response.data);
+      } catch (error) {
+        console.error('Error fetching M3U playlist:', error);
+        document.getElementById('app').innerHTML = `
+          <div class="text-center text-red-500 page-transition">
+            Failed to load channel list. Please try again later.
+          </div>
+        `;
+        return [];
+      }
+    }
+
+    // Initialize channels
+    let channels = [];
 
     const featuredChannels = ['animax', 'at-x', 'nhkg_tokyo', 'tokyo_mx'];
     const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
@@ -385,7 +437,7 @@
       const dots = document.querySelectorAll('.slider-dot');
       
       // Update slider position
-      const slideWidth = items[0].offsetWidth + 16; // 16px for margin
+      const slideWidth = items[0]?.offsetWidth + 16 || 0; // 16px for margin
       slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
       
       // Update active dot
@@ -609,7 +661,7 @@
           <div class="hero-bg bg-cover bg-center h-96 flex items-center justify-center mb-8 rounded-lg">
             <div class="text-center text-white">
               <h1 class="text-4xl font-bold mb-4">Watch Live TV Now</h1>
-              <p class="text-lg">Explore top channels like ${channels.find(ch => ch.tvgId === featuredChannels[0]).name} and more!</p>
+              <p class="text-lg">Explore top channels like ${channels.find(ch => ch.tvgId === featuredChannels[0])?.name || 'Anime'} and more!</p>
             </div>
           </div>
           ${groups.map(group => `
@@ -723,7 +775,7 @@
                     return `
                       <tr>
                         <td>${anime.title}</td>
-                        <td><a href="#page=channel/${anime.channelId}" class="text-red-500 hover:underline">${channel.name}</a></td>
+                        <td><a href="#page=channel/${anime.channelId}" class="text-red-500 hover:underline">${channel?.name || 'Unknown'}</a></td>
                         <td>${anime.day} ${anime.timeJST} JST</td>
                         <td>${convertJSTtoLocal(anime.day, anime.timeJST)}</td>
                       </tr>
@@ -842,7 +894,7 @@
     function initAutoplay(tvgId) {
       const autoplayToggle = document.getElementById('autoplay-toggle');
       const countdownElement = document.getElementById('autoplay-countdown');
-      const relatedChannels = channels.filter(ch => ch.group === channels.find(c => c.tvgId === tvgId).group && ch.tvgId !== tvgId);
+      const relatedChannels = channels.filter(ch => ch.group === channels.find(c => c.tvgId === tvgId)?.group && ch.tvgId !== tvgId);
       if (!relatedChannels.length || !autoplayToggle.checked) return;
 
       let timeLeft = 300; // 5 minutes
@@ -864,6 +916,18 @@
     }
 
     async function render() {
+      // Fetch channels if not already loaded
+      if (!channels.length) {
+        channels = await fetchChannels();
+        // Update category dropdown with dynamic groups
+        const categorySelect = document.getElementById('category');
+        if (categorySelect) {
+          const groups = ['Favorites', ...new Set(channels.map(ch => ch.group))];
+          categorySelect.innerHTML = `<option value="">All Categories</option>` + 
+            groups.map(group => `<option value="${group}">${group}</option>`).join('');
+        }
+      }
+
       const hash = window.location.hash;
       const app = document.getElementById('app');
       const animeSchedule = ongoingAnimeSchedule;
