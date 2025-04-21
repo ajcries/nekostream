@@ -55,6 +55,8 @@
     }
     .schedule-table th { background: #2d3748; }
     .schedule-table tr:hover { background: #4a5568; }
+
+    /* Navbar styles */
     .nav-menu {
       transition: transform 0.3s ease-in-out;
     }
@@ -97,6 +99,8 @@
         display: block;
       }
     }
+
+    /* Slider styles */
     .slider-container {
       position: relative;
       width: 100%;
@@ -160,6 +164,8 @@
     .slider-dot.active {
       background: #e53e3e;
     }
+
+    /* Mobile optimizations */
     @media (max-width: 768px) {
       .container {
         padding-left: 1rem;
@@ -224,6 +230,7 @@
       overlay.classList.toggle('active');
     }
 
+    // Schedule URL mapping for known channels
     const scheduleUrls = {
       "nhkg_tokyo": "https://www.nhk.or.jp/program/",
       "nhke_tokyo": "https://www.nhk.or.jp/school/program/",
@@ -263,12 +270,11 @@
       "tbs_ch2": "https://www.tbs.co.jp/tbschannel/schedule/"
     };
 
+    // Function to parse M3U content
     function parseM3U(content) {
       const lines = content.split('\n').map(line => line.trim());
       const channels = [];
       let currentChannel = null;
-      const invalidIds = ['we_need_donations_to_maintain_the_server!', 'donate:_https://ko-fi.com/dinhluong'];
-      const problematicDomains = ['vthanh.utako.moe', 'luong.utako.moe']; // Skip channels with invalid SSL certificates
 
       for (const line of lines) {
         if (line.startsWith('#EXTINF')) {
@@ -281,28 +287,14 @@
           const nameMatch = line.match(/,(.+)$/) || [];
           currentChannel.name = nameMatch[1] ? nameMatch[1].trim() : 'Unknown';
         } else if (line && !line.startsWith('#') && currentChannel) {
-          let url = line.replace(/^http:\/\//, 'https://');
-          const tvgId = currentChannel['tvg-id'] || currentChannel.name.toLowerCase().replace(/\s+/g, '_');
-          if (
-            invalidIds.includes(tvgId) ||
-            url.includes('google.com') ||
-            url.includes('ko-fi.com') ||
-            problematicDomains.some(domain => url.includes(domain))
-          ) {
-            console.warn(`Skipping channel ${currentChannel.name} with URL ${url} due to invalid SSL certificate or invalid ID`);
-            currentChannel = null;
-            continue;
-          }
-          if (!url.startsWith('https://')) {
-            console.warn(`Non-HTTPS URL detected for ${currentChannel.name}: ${url}`);
-          }
+          currentChannel.url = line;
           channels.push({
             group: currentChannel['group-title'] || 'Other',
-            tvgId: tvgId,
+            tvgId: currentChannel['tvg-id'] || currentChannel.name.toLowerCase().replace(/\s+/g, '_'),
             logo: currentChannel['tvg-logo'] || 'https://placehold.co/150x150?text=No+Logo',
             name: currentChannel.name,
-            url: url,
-            scheduleUrl: scheduleUrls[tvgId] || ''
+            url: currentChannel.url,
+            scheduleUrl: scheduleUrls[currentChannel['tvg-id']] || ''
           });
           currentChannel = null;
         }
@@ -311,46 +303,36 @@
       return channels;
     }
 
+    // Function to fetch and parse M3U playlist
     async function fetchChannels() {
       try {
-        // Use proxy for M3U fetch to avoid CORS issues
-        const response = await axios.get('https://your-proxy-server.com/proxy-m3u', {
+        const response = await axios.get('https://raw.githubusercontent.com/luongz/iptv-jp/refs/heads/main/jp.m3u', {
           headers: {
             'Accept': 'text/plain'
           }
         });
-        const channels = parseM3U(response.data);
-        if (!channels.length) {
-          throw new Error('No valid channels found in M3U playlist');
-        }
-        return channels;
+        return parseM3U(response.data);
       } catch (error) {
         console.error('Error fetching M3U playlist:', error);
         document.getElementById('app').innerHTML = `
           <div class="text-center text-red-500 page-transition">
-            Failed to load channel list. Some channels may be unavailable due to server issues. Please try again later.
+            Failed to load channel list. Please try again later.
           </div>
         `;
-        return [
-          {
-            group: 'Tokyo',
-            tvgId: 'tokyo_mx',
-            logo: 'https://placehold.co/150x150?text=Tokyo+MX',
-            name: 'Tokyo MX',
-            url: 'https://example.com/tokyo_mx.m3u8',
-            scheduleUrl: 'https://s.mxtv.jp/bangumi/'
-          }
-        ];
+        return [];
       }
     }
 
+    // Initialize channels
     let channels = [];
+
     const featuredChannels = ['animax', 'at-x', 'nhkg_tokyo', 'tokyo_mx'];
     const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
     const GAS_KEY = 'AKfycbxMW32ItfACH8tkS4W0p_Kwkx36SLWX5_uWAooYpuB44KZdL2daR50Qas_gWXYr_j8t7Q';
     let recognition = null;
     let subtitleTimeout = null;
 
+    // Anime data for 2025 releases with thumbnails
     const animeReleases2025 = [
       { title: "Kamitsubaki City Under Construction", premiere: "July 2025", thumbnail: "Images/kami02.jpg" },
       { title: "Dandadan Season 2", premiere: "July 2025", thumbnail: "Images/new-dandadan-season-2-key-visual-v0-fl44zyv1xmse1.jpg" },
@@ -422,6 +404,7 @@
       { title: "This Monster Wants to Eat Me", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1902/123522.jpg" }
     ];
 
+    // Ongoing anime schedule (Spring 2025, manually updated for mid-April 2025)
     const ongoingAnimeSchedule = [
       { title: "One Piece", channelId: "fuji_tv", day: "Sunday", timeJST: "09:30" },
       { title: "Uchuujin MuuMuu", channelId: "at-x", day: "Friday", timeJST: "22:30" },
@@ -444,6 +427,7 @@
       { title: "Ookami to Koshinryo: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" }
     ];
 
+    // Slider state
     let currentSlide = 0;
     const slidesPerView = 5;
 
@@ -452,9 +436,11 @@
       const items = document.querySelectorAll('.slider-item');
       const dots = document.querySelectorAll('.slider-dot');
       
-      const slideWidth = items[0]?.offsetWidth + 16 || 0;
+      // Update slider position
+      const slideWidth = items[0]?.offsetWidth + 16 || 0; // 16px for margin
       slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
       
+      // Update active dot
       dots.forEach((dot, index) => {
         dot.classList.toggle('active', index === Math.floor(currentSlide / slidesPerView));
       });
@@ -479,6 +465,7 @@
       initSlider();
     }
 
+    // Touch support for slider
     let touchStartX = 0;
     let touchEndX = 0;
 
@@ -500,6 +487,7 @@
       }
     });
 
+    // Fetch anime schedule from AniList (requires proxy/backend for CORS)
     async function fetchAnimeSchedule() {
       const query = `
         query {
@@ -561,6 +549,7 @@
       }
     }
 
+    // Convert JST to local time
     function convertJSTtoLocal(day, timeJST) {
       const [hours, minutes] = timeJST.split(':').map(Number);
       const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -669,9 +658,6 @@
       const groups = category === 'Favorites' ? ['Favorites'] : [...new Set(filteredChannels.map(ch => ch.group))];
       return `
         <div class="page-transition">
-          <div class="text-yellow-500 text-center mb-4">
-            Note: Some channels (e.g., TBS, NHK E, Fuji TV, BS Fuji) are temporarily unavailable due to server certificate issues. We are working to resolve this.
-          </div>
           <div class="hero-bg bg-cover bg-center h-96 flex items-center justify-center mb-8 rounded-lg">
             <div class="text-center text-white">
               <h1 class="text-4xl font-bold mb-4">Watch Live TV Now</h1>
@@ -870,38 +856,30 @@
     }
 
     function initHLS(video, url, tvgId) {
-      // Use proxy server to fetch streams, bypassing SSL certificate issues
-      const proxyUrl = `https://your-proxy-server.com/proxy-stream?url=${encodeURIComponent(url)}`;
       const loading = document.getElementById('loading');
       const error = document.getElementById('error');
       loading.classList.remove('hidden');
       if (Hls.isSupported()) {
         const hls = new Hls();
-        hls.loadSource(proxyUrl);
+        hls.loadSource(url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           loading.classList.add('hidden');
           initAutoplay(tvgId);
         });
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          let errorMessage = 'Failed to load stream. Please try another channel.';
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            errorMessage = 'Network error: The stream server may be unreachable or have an invalid SSL certificate.';
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            errorMessage = 'Media error: The stream format may be unsupported.';
-          }
-          error.textContent = errorMessage;
+        hls.on(Hls.Events.ERROR, () => {
+          error.textContent = 'Failed to load stream. Please try again later.';
           error.classList.remove('hidden');
           loading.classList.add('hidden');
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = proxyUrl;
+        video.src = url;
         video.addEventListener('loadedmetadata', () => {
           loading.classList.add('hidden');
           initAutoplay(tvgId);
         });
         video.addEventListener('error', () => {
-          error.textContent = 'Failed to load stream. The stream may be unavailable or have an invalid SSL certificate.';
+          error.textContent = 'Failed to load stream. Please try again later.';
           error.classList.remove('hidden');
           loading.classList.add('hidden');
         });
@@ -919,7 +897,7 @@
       const relatedChannels = channels.filter(ch => ch.group === channels.find(c => c.tvgId === tvgId)?.group && ch.tvgId !== tvgId);
       if (!relatedChannels.length || !autoplayToggle.checked) return;
 
-      let timeLeft = 300;
+      let timeLeft = 300; // 5 minutes
       countdownElement.classList.remove('hidden');
       const interval = setInterval(() => {
         if (!autoplayToggle.checked) {
@@ -938,8 +916,10 @@
     }
 
     async function render() {
+      // Fetch channels if not already loaded
       if (!channels.length) {
         channels = await fetchChannels();
+        // Update category dropdown with dynamic groups
         const categorySelect = document.getElementById('category');
         if (categorySelect) {
           const groups = ['Favorites', ...new Set(channels.map(ch => ch.group))];
