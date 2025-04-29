@@ -265,6 +265,9 @@
       overlay.classList.toggle('active');
     }
 
+    const API_KEY = 'nekostream-secure-key-2025';
+    const PROXY_PLAYLIST_URL = '/api/playlist-proxy?type=playlist&apiKey=' + encodeURIComponent(API_KEY);
+
     const scheduleUrls = {
       "nhkg_tokyo": "https://www.nhk.or.jp/program/",
       "nhke_tokyo": "https://www.nhk.or.jp/school/program/",
@@ -341,8 +344,9 @@
     async function fetchChannels(url) {
       const errorElement = document.getElementById('url-error');
       try {
+        const headers = url === PROXY_PLAYLIST_URL ? { 'X-API-Key': API_KEY } : {};
         const response = await axios.get(url, {
-          headers: { 'Accept': 'text/plain' }
+          headers: { 'Accept': 'text/plain', ...headers }
         });
         errorElement.classList.add('hidden');
         return parseM3U(response.data);
@@ -413,6 +417,13 @@
 
     async function loadSavedPlaylists() {
       channels = [];
+      // Always load the proxied playlist first
+      const proxyChannels = await fetchChannels(PROXY_PLAYLIST_URL);
+      if (proxyChannels.length > 0) {
+        channels = [...proxyChannels];
+      }
+
+      // Load additional user-saved playlists
       const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
       for (const url of savedUrls) {
         const newChannels = await fetchChannels(url);
@@ -421,6 +432,7 @@
         }
       }
       updateCategoryDropdown();
+      render();
     }
 
     function updateCategoryDropdown() {
@@ -746,38 +758,49 @@
       }
     }
 
-    function initStream(video, channel, tvgId) {
+    async function tryStreamUrl(video, url, streamType, errorElement, loadingElement, tvgId) {
+      if (streamType === 'hls' && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          loadingElement.classList.add('hidden');
+          initAutoplay(tvgId);
+        });
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          errorElement.textContent = 'Failed to load HLS stream: ' + (data.details || 'Unknown error');
+          errorElement.classList.remove('hidden');
+          loadingElement.classList.add('hidden');
+        });
+      } else {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+          loadingElement.classList.add('hidden');
+          initAutoplay(tvgId);
+        }, { once: true });
+        video.addEventListener('error', () => {
+          errorElement.textContent = 'Failed to load stream. The media may not be supported or the URL is invalid.';
+          errorElement.classList.remove('hidden');
+          loadingElement.classList.add('hidden');
+        }, { once: true });
+      }
+    }
+
+    async function initStream(video, channel, tvgId) {
       const loading = document.getElementById('loading');
       const error = document.getElementById('error');
       loading.classList.remove('hidden');
+      error.classList.add('hidden');
 
-      if (channel.streamType === 'hls' && Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(channel.url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          loading.classList.add('hidden');
-          initAutoplay(tvgId);
-        });
-        hls.on(Hls.Events.ERROR, () => {
-          error.textContent = 'Failed to load HLS stream. Please try again later.';
-          error.classList.remove('hidden');
-          loading.classList.add('hidden');
-        });
-      } else {
-        video.src = channel.url;
-        video.addEventListener('loadedmetadata', () => {
-          loading.classList.add('hidden');
-          initAutoplay(tvgId);
-        });
-        video.addEventListener('error', () => {
-          error.textContent = 'Failed to load stream. The media may not be supported or the URL is invalid.';
-          error.classList.remove('hidden');
-          loading.classList.add('hidden');
-        });
+      try {
+        await tryStreamUrl(video, channel.url, channel.streamType, error, loading, tvgId);
+        startSubtitles(video, document.getElementById('subtitle-overlay'));
+      } catch (err) {
+        console.error('Stream error:', err);
+        error.textContent = 'Failed to initialize stream. Please try again later.';
+        error.classList.remove('hidden');
+        loading.classList.add('hidden');
       }
-
-      startSubtitles(video, document.getElementById('subtitle-overlay'));
     }
 
     function renderHome() {
