@@ -192,6 +192,29 @@
         height: 120px;
       }
     }
+    .url-list {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #2d3748;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .url-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #4a5568;
+    }
+    .url-item:last-child {
+      border-bottom: none;
+    }
+    .delete-btn {
+      transition: color 0.2s ease;
+    }
+    .delete-btn:hover {
+      color: #f87171;
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -220,6 +243,10 @@
       <button onclick="loadM3U()" class="mt-2 md:mt-0 md:ml-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Load Playlist</button>
     </div>
     <div id="url-error" class="text-red-500 mb-4 hidden"></div>
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Saved Playlists</h2>
+      <div id="url-list" class="url-list"></div>
+    </div>
   </div>
 
   <script>
@@ -313,7 +340,7 @@
         console.error('Error fetching M3U playlist:', error);
         errorElement.textContent = 'Failed to load playlist. Please check the URL and try again.';
         errorElement.classList.remove('hidden');
-        return Bousan;
+        return [];
       }
     }
 
@@ -322,7 +349,17 @@
       if (!savedUrls.includes(url)) {
         savedUrls.push(url);
         localStorage.setItem('m3uUrls', JSON.stringify(savedUrls));
+        renderUrlList();
       }
+    }
+
+    function deleteM3UUrl(url) {
+      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
+      const updatedUrls = savedUrls.filter(u => u !== url);
+      localStorage.setItem('m3uUrls', JSON.stringify(updatedUrls));
+      renderUrlList();
+      // Reload channels to reflect removal
+      loadSavedPlaylists();
     }
 
     async function loadM3U() {
@@ -346,16 +383,31 @@
       }
     }
 
-    function loadSavedPlaylists() {
+    function renderUrlList() {
+      const urlList = document.getElementById('url-list');
       const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
-      savedUrls.forEach(async (url) => {
+      urlList.innerHTML = savedUrls.length > 0 ? savedUrls.map(url => `
+        <div class="url-item">
+          <span class="text-sm truncate">${url}</span>
+          <button onclick="deleteM3UUrl('${url}')" class="delete-btn text-red-500 hover:text-red-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      `).join('') : '<p class="text-gray-400">No saved playlists.</p>';
+    }
+
+    async function loadSavedPlaylists() {
+      channels = []; // Reset channels to avoid duplicates
+      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
+      for (const url of savedUrls) {
         const newChannels = await fetchChannels(url);
         if (newChannels.length > 0) {
           channels = [...new Set([...channels, ...newChannels].map(ch => JSON.stringify(ch)))].map(ch => JSON.parse(ch));
         }
-      });
+      }
       updateCategoryDropdown();
-      render();
     }
 
     function updateCategoryDropdown() {
@@ -945,10 +997,6 @@
     }
 
     async function render() {
-      if (!channels.length) {
-        loadSavedPlaylists();
-      }
-
       const hash = window.location.hash;
       const app = document.getElementById('app');
       if (hash.startsWith('#page=channel/')) {
@@ -975,6 +1023,7 @@
       } else {
         app.innerHTML = renderHome();
       }
+      renderUrlList();
       document.getElementById('search')?.addEventListener('input', render);
       document.getElementById('category')?.addEventListener('change', render);
     }
@@ -984,9 +1033,16 @@
     window.goToSlide = goToSlide;
     window.toggleFavorite = toggleFavorite;
     window.toggleMenu = toggleMenu;
+    window.deleteM3UUrl = deleteM3UUrl;
+
+    // Initialize the app
+    async function init() {
+      await loadSavedPlaylists();
+      render();
+    }
 
     window.addEventListener('hashchange', render);
-    render();
+    init();
   </script>
 </body>
 </html>
