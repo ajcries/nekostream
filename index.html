@@ -55,8 +55,6 @@
     }
     .schedule-table th { background: #2d3748; }
     .schedule-table tr:hover { background: #4a5568; }
-
-    /* Navbar styles */
     .nav-menu {
       transition: transform 0.3s ease-in-out;
     }
@@ -99,8 +97,6 @@
         display: block;
       }
     }
-
-    /* Slider styles */
     .slider-container {
       position: relative;
       width: 100%;
@@ -164,8 +160,6 @@
     .slider-dot.active {
       background: #e53e3e;
     }
-
-    /* Mobile optimizations */
     @media (max-width: 768px) {
       .container {
         padding-left: 1rem;
@@ -220,7 +214,13 @@
     </div>
   </nav>
   <div class="nav-overlay" onclick="toggleMenu()"></div>
-  <div id="app" class="container mx-auto px-4 py-6"></div>
+  <div id="app" class="container mx-auto px-4 py-6">
+    <div class="mb-6">
+      <input type="text" id="m3u-url" placeholder="Enter .m3u URL..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500 w-full md:w-1/2">
+      <button onclick="loadM3U()" class="mt-2 md:mt-0 md:ml-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Load Playlist</button>
+    </div>
+    <div id="url-error" class="text-red-500 mb-4 hidden"></div>
+  </div>
 
   <script>
     function toggleMenu() {
@@ -230,7 +230,6 @@
       overlay.classList.toggle('active');
     }
 
-    // Schedule URL mapping for known channels
     const scheduleUrls = {
       "nhkg_tokyo": "https://www.nhk.or.jp/program/",
       "nhke_tokyo": "https://www.nhk.or.jp/school/program/",
@@ -270,7 +269,6 @@
       "tbs_ch2": "https://www.tbs.co.jp/tbschannel/schedule/"
     };
 
-    // Function to parse M3U content
     function parseM3U(content) {
       const lines = content.split('\n').map(line => line.trim());
       const channels = [];
@@ -303,131 +301,226 @@
       return channels;
     }
 
-    // Function to fetch and parse M3U playlist
-    async function fetchChannels() {
+    async function fetchChannels(url) {
+      const errorElement = document.getElementById('url-error');
       try {
-        const response = await axios.get('https://raw.githubusercontent.com/luongz/iptv-jp/refs/heads/main/jp.m3u', {
-          headers: {
-            'Accept': 'text/plain'
-          }
+        const response = await axios.get(url, {
+          headers: { 'Accept': 'text/plain' }
         });
+        errorElement.classList.add('hidden');
         return parseM3U(response.data);
       } catch (error) {
         console.error('Error fetching M3U playlist:', error);
-        document.getElementById('app').innerHTML = `
-          <div class="text-center text-red-500 page-transition">
-            Failed to load channel list. Please try again later.
-          </div>
-        `;
+        errorElement.textContent = 'Failed to load playlist. Please check the URL and try again.';
+        errorElement.classList.remove('hidden');
+        return Bousan;
+      }
+    }
+
+    function saveM3UUrl(url) {
+      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
+      if (!savedUrls.includes(url)) {
+        savedUrls.push(url);
+        localStorage.setItem('m3uUrls', JSON.stringify(savedUrls));
+      }
+    }
+
+    async function loadM3U() {
+      const urlInput = document.getElementById('m3u-url');
+      const url = urlInput.value.trim();
+      if (!url) {
+        document.getElementById('url-error').textContent = 'Please enter a valid .m3u URL.';
+        document.getElementById('url-error').classList.remove('hidden');
+        return;
+      }
+
+      const newChannels = await fetchChannels(url);
+      if (newChannels.length > 0) {
+        const shouldSave = confirm('Do you want to save this playlist URL for future use?');
+        if (shouldSave) {
+          saveM3UUrl(url);
+        }
+        channels = [...new Set([...channels, ...newChannels].map(ch => JSON.stringify(ch)))].map(ch => JSON.parse(ch));
+        updateCategoryDropdown();
+        render();
+      }
+    }
+
+    function loadSavedPlaylists() {
+      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
+      savedUrls.forEach(async (url) => {
+        const newChannels = await fetchChannels(url);
+        if (newChannels.length > 0) {
+          channels = [...new Set([...channels, ...newChannels].map(ch => JSON.stringify(ch)))].map(ch => JSON.parse(ch));
+        }
+      });
+      updateCategoryDropdown();
+      render();
+    }
+
+    function updateCategoryDropdown() {
+      const categorySelect = document.getElementById('category');
+      if (categorySelect) {
+        const groups = ['Favorites', ...new Set(channels.map(ch => ch.group))];
+        categorySelect.innerHTML = `<option value="">All Categories</option>` + 
+          groups.map(group => `<option value="${group}">${group}</option>`).join('');
+      }
+    }
+
+    const ANILIST_API_URL = 'https://graphql.anilist.co';
+    const ANILIST_CLIENT_ID = '26346';
+    const ANILIST_CLIENT_SECRET = 'hc52FJbGrxFxQWQ1EoXLGscdZ7CcFuVdMyU9VhiC';
+
+    async function getAniListAccessToken() {
+      try {
+        const response = await axios.post('https://anilist.co/api/v2/oauth/token', {
+          grant_type: 'client_credentials',
+          client_id: ANILIST_CLIENT_ID,
+          client_secret: ANILIST_CLIENT_SECRET
+        });
+        return response.data.access_token;
+      } catch (error) {
+        console.error('Error fetching AniList access token:', error);
+        return null;
+      }
+    }
+
+    async function fetchAnimeSchedule() {
+      const accessToken = await getAniListAccessToken();
+      if (!accessToken) {
+        console.error('No access token available');
+        return [];
+      }
+
+      const query = `
+        query {
+          Page(page: 1, perPage: 50) {
+            media(season: SPRING, seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
+              id
+              title { romaji }
+              startDate { year month day }
+              airingSchedule(notYetAired: true, perPage: 1) {
+                nodes {
+                  airingAt
+                  episode
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      try {
+        const response = await axios.post(ANILIST_API_URL, { query }, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        const media = response.data.data.Page.media;
+        const channelMap = channels.reduce((map, channel) => {
+          const name = channel.name.toLowerCase().replace(/\s+/g, '');
+          map[name] = channel.tvgId;
+          return map;
+        }, {
+          "onepiece": "fuji_tv",
+          "kingdom": "nhkg_tokyo",
+          "kaijuno8": "tv_tokyo",
+          "konosuba": "tokyo_mx",
+          "mushokutensei": "tokyo_mx",
+          "yurucamp": "at-x",
+          "asignofaffection": "tokyo_mx",
+          "spiceandwolf": "tv_tokyo",
+          "thedukeofdeathandhismaid": "tokyo_mx",
+          "re:monster": "tokyo_mx",
+          "unnamedmemory": "at-x",
+          "blackbutler": "tokyo_mx",
+          "tonarinoyoukai-san": "at-x",
+          "girlsbandcry": "tokyo_mx",
+          "kuramerukagari": "tokyo_mx",
+          "themanySidesofvoiceactorradio": "at-x",
+          "chiyumahounomachigattatsukai-kata": "tokyo_mx",
+          "ookamitokoshinryo": "tv_tokyo",
+          "uchuujinmuumuu": "at-x"
+        });
+
+        return media
+          .map(item => {
+            const airing = item.airingSchedule.nodes[0];
+            if (!airing) return null;
+            const date = new Date(airing.airingAt * 1000);
+            const day = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' });
+            const timeJST = date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' });
+            const titleKey = item.title.romaji.toLowerCase().replace(/\s+/g, '');
+            return {
+              title: item.title.romaji,
+              channelId: channelMap[titleKey] || channelMap[item.title.romaji.toLowerCase().replace(/[^a-z0-9]/g, '')] || "tokyo_mx",
+              day,
+              timeJST
+            };
+          })
+          .filter(item => item);
+      } catch (error) {
+        console.error('AniList API error:', error);
         return [];
       }
     }
 
-    // Initialize channels
-    let channels = [];
+    async function fetchAnimeReleases() {
+      const accessToken = await getAniListAccessToken();
+      if (!accessToken) {
+        console.error('No access token available for anime releases');
+        return [];
+      }
 
+      const query = `
+        query {
+          Page(page: 1, perPage: 100) {
+            media(seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
+              id
+              title { romaji }
+              startDate { year month day }
+              coverImage { large }
+              season
+            }
+          }
+        }
+      `;
+
+      try {
+        const response = await axios.post(ANILIST_API_URL, { query }, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        const media = response.data.data.Page.media;
+        return media
+          .filter(item => item.startDate.year === 2025 && item.startDate.month && item.startDate.day)
+          .map(item => {
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const premiere = `${monthNames[item.startDate.month - 1]} ${item.startDate.year}`;
+            return {
+              title: item.title.romaji,
+              premiere,
+              thumbnail: item.coverImage.large || 'https://placehold.co/200x300?text=No+Image'
+            };
+          });
+      } catch (error) {
+        console.error('AniList API error for releases:', error);
+        return [];
+      }
+    }
+
+    let channels = [];
     const featuredChannels = ['animax', 'at-x', 'nhkg_tokyo', 'tokyo_mx'];
     const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
     const GAS_KEY = 'AKfycbxMW32ItfACH8tkS4W0p_Kwkx36SLWX5_uWAooYpuB44KZdL2daR50Qas_gWXYr_j8t7Q';
     let recognition = null;
     let subtitleTimeout = null;
 
-    // Anime data for 2025 releases with thumbnails
-    const animeReleases2025 = [
-      { title: "Kamitsubaki City Under Construction", premiere: "July 2025", thumbnail: "Images/kami02.jpg" },
-      { title: "Dandadan Season 2", premiere: "July 2025", thumbnail: "Images/new-dandadan-season-2-key-visual-v0-fl44zyv1xmse1.jpg" },
-      { title: "City the Animation", premiere: "July 2025", thumbnail: "Images/city-anime-announced-lets-fucking-gooooooooooooooooo-v0-63zdnwg2m5qd1.jpg" },
-      { title: "Grand Blue Dreaming Season 2", premiere: "July 2025", thumbnail: "Images/Grand-Blue-Season-2.jpg" },
-      { title: "Solo Camping for Two", premiere: "July 2025", thumbnail: "Images/solo_camping_for_two_teaser_art.jpg" },
-      { title: "A Couple of Cuckoos Season 2", premiere: "July 2025", thumbnail: "Images/filters_quality(95)format(webp).jpg" },
-      { title: "Apocalypse Bringer Mynoghra", premiere: "July 2025", thumbnail: "Images/apocalypse-bringer-mynoghra-header.jpg" },
-      { title: "April Showers Bring May Flowers", premiere: "July 2025", thumbnail: "https://booklive.jp/product/index/title_id/407634/vol_no/001" },
-      { title: "Bad Girl", premiere: "July 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/3/27/badgirl-anime-trailer-key-visual-additional-cast" },
-      { title: "Betrothed to My Sister's Ex", premiere: "July 2025", thumbnail: "https://www.imdb.com/news/ni65024437/" },
-      { title: "Call of the Night Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1123/123465.jpg" },
-      { title: "Captivated, by You", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1567/123466.jpg" },
-      { title: "Clevatess: Majū no Ō to Akago to Shikabane no Yūsha", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1345/123467.jpg" },
-      { title: "Cultural Exchange with Game Center Girl", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1893/123468.jpg" },
-      { title: "Dekin no Mogura", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1568/123469.jpg" },
-      { title: "Dr. Stone: Science Future Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1346/123470.jpg" },
-      { title: "Fermat no Ryōri", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1780/123471.jpg" },
-      { title: "Gachiakuta", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1124/123472.jpg" },
-      { title: "Hell Teacher: Jigoku Sensei Nube", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1457/123473.jpg" },
-      { title: "Hitozuma no Kuchibiru wa Kan Chūhai no Aji ga Shite", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1894/123474.jpg" },
-      { title: "Hotel Inhumans", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1569/123475.jpg" },
-      { title: "I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1347/123476.jpg" },
-      { title: "Kaiju No. 8 Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1781/123477.jpg" },
-      { title: "Kizetsu Yūsha to Ansatsu Hime", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1125/123478.jpg" },
-      { title: "Let's Go Karaoke!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1458/123479.jpg" },
-      { title: "Mikadono Sanshimai wa Angai, Choroi", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1895/123480.jpg" },
-      { title: "Mr. Osomatsu Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1570/123481.jpg" },
-      { title: "My Dress-Up Darling Season 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1348/123482.jpg" },
-      { title: "New Panty & Stocking with Garterbelt", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1782/123483.jpg" },
-      { title: "Necronomico no Cosmic Horror Show", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1126/123484.jpg" },
-      { title: "New Saga", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1459/123485.jpg" },
-      { title: "Night of the Living Cat", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1896/123486.jpg" },
-      { title: "Onmyō Kaiten Re:verse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1571/123487.jpg" },
-      { title: "Private Tutor to the Duke's Daughter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1349/123488.jpg" },
-      { title: "Rascal Does Not Dream of Santa Claus", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1783/123489.jpg" },
-      { title: "Reincarnated as a Neglected Noble: Raising My Baby Brother with Memories from My Past Life", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1127/123490.jpg" },
-      { title: "Rent-A-Girlfriend Season 4 Part 1", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1460/123491.jpg" },
-      { title: "Sakamoto Days Part 2", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1897/123492.jpg" },
-      { title: "Secrets of the Silent Witch", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1572/123493.jpg" },
-      { title: "The Fragrant Flower Blooms with Dignity", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1350/123494.jpg" },
-      { title: "The Rising of the Shield Hero Season 4", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1784/123495.jpg" },
-      { title: "The Water Magician", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1128/123496.jpg" },
-      { title: "There's No Freaking Way I'll be Your Lover! Unless...", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1461/123497.jpg" },
-      { title: "Tougen Anki: Legend of the Cursed Blood", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1898/123498.jpg" },
-      { title: "Turkey!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1573/123499.jpg" },
-      { title: "Uglymug, Epicfighter", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1351/123500.jpg" },
-      { title: "Utagoe wa Mille-Feuille", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1785/123501.jpg" },
-      { title: "Watari-kun's ****** Is About to Collapse", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1129/123502.jpg" },
-      { title: "Welcome to the Outcast's Restaurant!", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1462/123503.jpg" },
-      { title: "With You and the Rain", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1899/123504.jpg" },
-      { title: "Yūsha Party o Tsuihō Sareta Shiro Madōshi, S-Rank Bōkensha ni Hirowareru", premiere: "July 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1574/123505.jpg" },
-      { title: "3-Nen Z-Gumi Ginpachi-Sensei", premiere: "October 2025", thumbnail: "https://i.ebayimg.com/images/g/7BQAAOSw5cNYb47q/s-l1600.jpg" },
-      { title: "A Wild Last Boss Appeared!", premiere: "October 2025", thumbnail: "https://www.crunchyroll.com/news/latest/2025/2/10/a-wild-last-boss-appeared-anime-teaser-trailer-visual-october-2025-premiere" },
-      { title: "Digimon Beatbreak", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1130/123508.jpg" },
-      { title: "Egao no Taenai Shokuba Desu", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1463/123509.jpg" },
-      { title: "Gnosia", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1900/123510.jpg" },
-      { title: "Kingdom Season 6", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1575/123511.jpg" },
-      { title: "Let This Grieving Soul Retire! Season 2", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1353/123512.jpg" },
-      { title: "My Friend's Little Sister Has It In for Me!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1787/123513.jpg" },
-      { title: "My Hero Academia Season 8", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1131/123514.jpg" },
-      { title: "My Status as an Assassin Obviously Exceeds the Hero's", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1464/123515.jpg" },
-      { title: "Nohara Hiroshi Hirumeshi no Ryūgi", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1901/123516.jpg" },
-      { title: "One-Punch Man Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1576/123517.jpg" },
-      { title: "Pass the Monster Meat, Milady!", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1354/123518.jpg" },
-      { title: "Sentenced to Be a Hero", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1788/123519.jpg" },
-      { title: "Spy × Family Season 3", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1132/123520.jpg" },
-      { title: "The Banished Court Magician Aims to Become the Strongest", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1465/123521.jpg" },
-      { title: "This Monster Wants to Eat Me", premiere: "October 2025", thumbnail: "https://cdn.myanimelist.net/images/anime/1902/123522.jpg" }
-    ];
-
-    // Ongoing anime schedule (Spring 2025, manually updated for mid-April 2025)
-    const ongoingAnimeSchedule = [
-      { title: "One Piece", channelId: "fuji_tv", day: "Sunday", timeJST: "09:30" },
-      { title: "Uchuujin MuuMuu", channelId: "at-x", day: "Friday", timeJST: "22:30" },
-      { title: "Kingdom Season 5", channelId: "nhkg_tokyo", day: "Sunday", timeJST: "24:00" },
-      { title: "Kaiju No. 8", channelId: "tv_tokyo", day: "Saturday", timeJST: "23:00" },
-      { title: "Konosuba: An Explosion on This Wonderful World!", channelId: "tokyo_mx", day: "Wednesday", timeJST: "23:30" },
-      { title: "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", channelId: "tokyo_mx", day: "Sunday", timeJST: "24:30" },
-      { title: "Yuru Camp△ Season 3", channelId: "at-x", day: "Sunday", timeJST: "23:30" },
-      { title: "A Sign of Affection", channelId: "tokyo_mx", day: "Saturday", timeJST: "22:30" },
-      { title: "Spice and Wolf: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" },
-      { title: "The Duke of Death and His Maid Season 3", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:00" },
-      { title: "Re:Monster", channelId: "tokyo_mx", day: "Monday", timeJST: "24:00" },
-      { title: "Unnamed Memory", channelId: "at-x", day: "Tuesday", timeJST: "23:30" },
-      { title: "Black Butler: Public School Arc", channelId: "tokyo_mx", day: "Saturday", timeJST: "23:30" },
-      { title: "Tonari no Youkai-san", channelId: "at-x", day: "Saturday", timeJST: "21:00" },
-      { title: "Girls Band Cry", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:30" },
-      { title: "Kuramerukagari", channelId: "tokyo_mx", day: "Friday", timeJST: "25:05" },
-      { title: "The Many Sides of Voice Actor Radio", channelId: "at-x", day: "Wednesday", timeJST: "23:00" },
-      { title: "Chiyu Mahou no Machigatta Tsukai-kata", channelId: "tokyo_mx", day: "Friday", timeJST: "24:30" },
-      { title: "Ookami to Koshinryo: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" }
-    ];
-
-    // Slider state
     let currentSlide = 0;
     const slidesPerView = 5;
 
@@ -436,11 +529,9 @@
       const items = document.querySelectorAll('.slider-item');
       const dots = document.querySelectorAll('.slider-dot');
       
-      // Update slider position
-      const slideWidth = items[0]?.offsetWidth + 16 || 0; // 16px for margin
+      const slideWidth = items[0]?.offsetWidth + 16 || 0;
       slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
       
-      // Update active dot
       dots.forEach((dot, index) => {
         dot.classList.toggle('active', index === Math.floor(currentSlide / slidesPerView));
       });
@@ -465,7 +556,6 @@
       initSlider();
     }
 
-    // Touch support for slider
     let touchStartX = 0;
     let touchEndX = 0;
 
@@ -487,69 +577,6 @@
       }
     });
 
-    // Fetch anime schedule from AniList (requires proxy/backend for CORS)
-    async function fetchAnimeSchedule() {
-      const query = `
-        query {
-          Page(page: 1, perPage: 10) {
-            media(season: SPRING, seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
-              id
-              title { romaji english }
-              startDate { year month day }
-              airingSchedule(notYetAired: true, perPage: 1) {
-                nodes {
-                  airingAt
-                  episode
-                }
-              }
-            }
-          }
-        }
-      `;
-      try {
-        const response = await axios.post('https://graphql.anilist.co', { query });
-        const media = response.data.data.Page.media;
-        return media.map(item => {
-          const airing = item.airingSchedule.nodes[0];
-          if (!airing) return null;
-          const date = new Date(airing.airingAt * 1000);
-          const day = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' });
-          const timeJST = date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' });
-          const channelMap = {
-            "One Piece": "fuji_tv",
-            "Kingdom Season 5": "nhkg_tokyo",
-            "Kaiju No. 8": "tv_tokyo",
-            "Konosuba: An Explosion on This Wonderful World!": "tokyo_mx",
-            "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2": "tokyo_mx",
-            "Yuru Camp△ Season 3": "at-x",
-            "A Sign of Affection": "tokyo_mx",
-            "Spice and Wolf: Merchant Meets the Wise Wolf": "tv_tokyo",
-            "The Duke of Death and His Maid Season 3": "tokyo_mx",
-            "Re:Monster": "tokyo_mx",
-            "Unnamed Memory": "at-x",
-            "Black Butler: Public School Arc": "tokyo_mx",
-            "Tonari no Youkai-san": "at-x",
-            "Girls Band Cry": "tokyo_mx",
-            "Kuramerukagari": "tokyo_mx",
-            "The Many Sides of Voice Actor Radio": "at-x",
-            "Chiyu Mahou no Machigatta Tsukai-kata": "tokyo_mx",
-            "Ookami to Koshinryo: Merchant Meets the Wise Wolf": "tv_tokyo",
-            "Uchuujin MuuMuu": "at-x"
-          };
-          return {
-            title: item.title.romaji,
-            channelId: channelMap[item.title.romaji] || "tokyo_mx",
-            day,
-            timeJST
-          };
-        }).filter(item => item);
-      } catch (error) {
-        console.error('AniList API error:', error);
-        return ongoingAnimeSchedule;
-      }
-    }
-
-    // Convert JST to local time
     function convertJSTtoLocal(day, timeJST) {
       const [hours, minutes] = timeJST.split(':').map(Number);
       const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -691,15 +718,17 @@
       `;
     }
 
-    function renderAnimePage(animeSchedule = ongoingAnimeSchedule) {
-      const animeByMonth = animeReleases2025.reduce((acc, anime) => {
+    async function renderAnimePage() {
+      const animeSchedule = await fetchAnimeSchedule();
+      const animeReleases = await fetchAnimeReleases();
+      const animeByMonth = animeReleases.reduce((acc, anime) => {
         const month = anime.premiere.split(' ')[0];
         if (!acc[month]) acc[month] = [];
         acc[month].push(anime);
         return acc;
       }, {});
       
-      const totalAnime = animeReleases2025.length;
+      const totalAnime = animeReleases.length;
       const dotsCount = Math.ceil(totalAnime / slidesPerView);
       
       return `
@@ -713,9 +742,9 @@
             <div class="slider-container">
               <button class="slider-nav slider-prev" onclick="prevSlide()">❮</button>
               <div class="slider flex">
-                ${animeReleases2025.map(anime => `
+                ${animeReleases.map(anime => `
                   <div class="slider-item anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
-                    <img src="${anime.thumbnail || 'https://placehold.co/200x300?text=No+Image'}" 
+                    <img src="${anime.thumbnail}" 
                          alt="${anime.title}" 
                          class="w-full h-48 object-cover mb-2 rounded">
                     <p class="text-sm font-medium">${anime.title}</p>
@@ -739,7 +768,7 @@
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 ${animeList.map(anime => `
                   <div class="anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
-                    <img src="${anime.thumbnail || 'https://placehold.co/200x300?text=No+Image'}" 
+                    <img src="${anime.thumbnail}" 
                          alt="${anime.title}" 
                          class="w-full h-48 object-cover mb-2 rounded">
                     <p class="text-sm font-medium">${anime.title}</p>
@@ -897,7 +926,7 @@
       const relatedChannels = channels.filter(ch => ch.group === channels.find(c => c.tvgId === tvgId)?.group && ch.tvgId !== tvgId);
       if (!relatedChannels.length || !autoplayToggle.checked) return;
 
-      let timeLeft = 300; // 5 minutes
+      let timeLeft = 300;
       countdownElement.classList.remove('hidden');
       const interval = setInterval(() => {
         if (!autoplayToggle.checked) {
@@ -916,21 +945,12 @@
     }
 
     async function render() {
-      // Fetch channels if not already loaded
       if (!channels.length) {
-        channels = await fetchChannels();
-        // Update category dropdown with dynamic groups
-        const categorySelect = document.getElementById('category');
-        if (categorySelect) {
-          const groups = ['Favorites', ...new Set(channels.map(ch => ch.group))];
-          categorySelect.innerHTML = `<option value="">All Categories</option>` + 
-            groups.map(group => `<option value="${group}">${group}</option>`).join('');
-        }
+        loadSavedPlaylists();
       }
 
       const hash = window.location.hash;
       const app = document.getElementById('app');
-      const animeSchedule = ongoingAnimeSchedule;
       if (hash.startsWith('#page=channel/')) {
         const tvgId = hash.split('#page=channel/')[1];
         app.innerHTML = renderChannel(tvgId);
@@ -950,7 +970,7 @@
         });
         document.getElementById('autoplay-toggle')?.addEventListener('change', () => initAutoplay(tvgId));
       } else if (hash === '#page=anime') {
-        app.innerHTML = renderAnimePage(animeSchedule);
+        app.innerHTML = await renderAnimePage();
         setTimeout(initSlider, 0);
       } else {
         app.innerHTML = renderHome();
