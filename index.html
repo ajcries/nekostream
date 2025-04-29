@@ -321,13 +321,15 @@
           currentChannel.name = nameMatch[1] ? nameMatch[1].trim() : 'Unknown';
         } else if (line && !line.startsWith('#') && currentChannel) {
           currentChannel.url = line;
+          const streamType = line.toLowerCase().endsWith('.m3u8') ? 'hls' : 'http';
           channels.push({
             group: currentChannel['group-title'] || 'Other',
             tvgId: currentChannel['tvg-id'] || currentChannel.name.toLowerCase().replace(/\s+/g, '_'),
             logo: currentChannel['tvg-logo'] || 'https://placehold.co/150x150?text=No+Logo',
             name: currentChannel.name,
             url: currentChannel.url,
-            scheduleUrl: scheduleUrls[currentChannel['tvg-id']] || ''
+            scheduleUrl: scheduleUrls[currentChannel['tvg-id']] || '',
+            streamType
           });
           currentChannel = null;
         }
@@ -646,7 +648,7 @@
           }
         });
       }
-      renderUrlList(); // Initial render of saved URLs
+      renderUrlList();
     });
 
     function convertJSTtoLocal(day, timeJST) {
@@ -742,6 +744,40 @@
       if (document.getElementById('subtitle-toggle')?.checked) {
         recognition.start();
       }
+    }
+
+    function initStream(video, channel, tvgId) {
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+      loading.classList.remove('hidden');
+
+      if (channel.streamType === 'hls' && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(channel.url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          loading.classList.add('hidden');
+          initAutoplay(tvgId);
+        });
+        hls.on(Hls.Events.ERROR, () => {
+          error.textContent = 'Failed to load HLS stream. Please try again later.';
+          error.classList.remove('hidden');
+          loading.classList.add('hidden');
+        });
+      } else {
+        video.src = channel.url;
+        video.addEventListener('loadedmetadata', () => {
+          loading.classList.add('hidden');
+          initAutoplay(tvgId);
+        });
+        video.addEventListener('error', () => {
+          error.textContent = 'Failed to load stream. The media may not be supported or the URL is invalid.';
+          error.classList.remove('hidden');
+          loading.classList.add('hidden');
+        });
+      }
+
+      startSubtitles(video, document.getElementById('subtitle-overlay'));
     }
 
     function renderHome() {
@@ -956,42 +992,6 @@
       `;
     }
 
-    function initHLS(video, url, tvgId) {
-      const loading = document.getElementById('loading');
-      const error = document.getElementById('error');
-      loading.classList.remove('hidden');
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          loading.classList.add('hidden');
-          initAutoplay(tvgId);
-        });
-        hls.on(Hls.Events.ERROR, () => {
-          error.textContent = 'Failed to load stream. Please try again later.';
-          error.classList.remove('hidden');
-          loading.classList.add('hidden');
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
-          loading.classList.add('hidden');
-          initAutoplay(tvgId);
-        });
-        video.addEventListener('error', () => {
-          error.textContent = 'Failed to load stream. Please try again later.';
-          error.classList.remove('hidden');
-          loading.classList.add('hidden');
-        });
-      } else {
-        error.textContent = 'HLS is not supported in this browser.';
-        error.classList.remove('hidden');
-        loading.classList.add('hidden');
-      }
-      startSubtitles(video, document.getElementById('subtitle-overlay'));
-    }
-
     function initAutoplay(tvgId) {
       const autoplayToggle = document.getElementById('autoplay-toggle');
       const countdownElement = document.getElementById('autoplay-countdown');
@@ -1030,7 +1030,7 @@
           const video = document.getElementById('video-player');
           const channel = channels.find(ch => ch.tvgId === tvgId);
           if (channel) {
-            initHLS(video, channel.url, tvgId);
+            initStream(video, channel, tvgId);
           }
           document.getElementById('subtitle-toggle')?.addEventListener('change', () => {
             if (recognition) {
