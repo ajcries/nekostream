@@ -1,0 +1,30 @@
+const axios = require('axios');
+
+module.exports = async (req, res) => {
+  const { url } = req.query; // Use query parameter for simplicity
+
+  if (!url || !url.match(/^http(s)?:\/\//)) {
+    return res.status(400).json({ error: 'Invalid or missing URL' });
+  }
+
+  try {
+    const response = await axios.get(url, {
+      responseType: 'stream',
+      headers: {
+        'Accept': '*/*',
+        'User-Agent': 'axios/1.6.7'
+      }
+    });
+
+    res.setHeader('Content-Type', response.headers['content-type'] || 'application/vnd.apple.mpegurl');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-cache');
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Stream proxy error:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to proxy stream',
+      details: error.message
+    });
+  }
+};
