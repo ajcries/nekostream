@@ -215,6 +215,12 @@
     .delete-btn:hover {
       color: #f87171;
     }
+    .m3u-section {
+      background: #2d3748;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -237,16 +243,18 @@
     </div>
   </nav>
   <div class="nav-overlay" onclick="toggleMenu()"></div>
-  <div id="app" class="container mx-auto px-4 py-6">
-    <div class="mb-6">
-      <input type="text" id="m3u-url" placeholder="Enter .m3u URL..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500 w-full md:w-1/2">
-      <button onclick="loadM3U()" class="mt-2 md:mt-0 md:ml-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Load Playlist</button>
-    </div>
-    <div id="url-error" class="text-red-500 mb-4 hidden"></div>
-    <div class="mb-6">
-      <h2 class="text-xl font-semibold mb-2">Saved Playlists</h2>
+  <div class="container mx-auto px-4 py-6">
+    <div class="m3u-section mb-6">
+      <h2 class="text-xl font-semibold mb-2">Add .m3u Playlist</h2>
+      <div class="flex flex-col md:flex-row md:items-center gap-2">
+        <input type="text" id="m3u-url" placeholder="Enter .m3u URL (e.g., https://raw.githubusercontent.com/luongz/iptv-jp/main/jp.m3u)" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500 w-full md:w-1/2">
+        <button onclick="loadM3U()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Load Playlist</button>
+      </div>
+      <div id="url-error" class="text-red-500 mt-2 hidden"></div>
+      <h3 class="text-lg font-semibold mt-4 mb-2">Saved Playlists</h3>
       <div id="url-list" class="url-list"></div>
     </div>
+    <div id="app"></div>
   </div>
 
   <script>
@@ -358,7 +366,6 @@
       const updatedUrls = savedUrls.filter(u => u !== url);
       localStorage.setItem('m3uUrls', JSON.stringify(updatedUrls));
       renderUrlList();
-      // Reload channels to reflect removal
       loadSavedPlaylists();
     }
 
@@ -385,11 +392,15 @@
 
     function renderUrlList() {
       const urlList = document.getElementById('url-list');
+      if (!urlList) {
+        console.error('URL list element not found');
+        return;
+      }
       const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
       urlList.innerHTML = savedUrls.length > 0 ? savedUrls.map(url => `
         <div class="url-item">
           <span class="text-sm truncate">${url}</span>
-          <button onclick="deleteM3UUrl('${url}')" class="delete-btn text-red-500 hover:text-red-700">
+          <button onclick="deleteM3UUrl('${url.replace(/'/g, "\\'")}')" class="delete-btn text-red-500 hover:text-red-700">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -399,7 +410,7 @@
     }
 
     async function loadSavedPlaylists() {
-      channels = []; // Reset channels to avoid duplicates
+      channels = [];
       const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
       for (const url of savedUrls) {
         const newChannels = await fetchChannels(url);
@@ -425,14 +436,18 @@
 
     async function getAniListAccessToken() {
       try {
-        const response = await axios.post('https://anilist.co/api/v2/oauth/token', {
-          grant_type: 'client_credentials',
-          client_id: ANILIST_CLIENT_ID,
-          client_secret: ANILIST_CLIENT_SECRET
+        const response = await axios.post('/api/proxy', {
+          url: 'https://anilist.co/api/v2/oauth/token',
+          method: 'POST',
+          data: {
+            grant_type: 'client_credentials',
+            client_id: ANILIST_CLIENT_ID,
+            client_secret: ANILIST_CLIENT_SECRET
+          }
         });
         return response.data.access_token;
       } catch (error) {
-        console.error('Error fetching AniList access token:', error);
+        console.error('Error fetching AniList access token:', error.message, error.response?.data);
         return null;
       }
     }
@@ -440,7 +455,8 @@
     async function fetchAnimeSchedule() {
       const accessToken = await getAniListAccessToken();
       if (!accessToken) {
-        console.error('No access token available');
+        console.error('No access token available for anime schedule');
+        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime schedule. Please try again later.</p>';
         return [];
       }
 
@@ -514,7 +530,8 @@
           })
           .filter(item => item);
       } catch (error) {
-        console.error('AniList API error:', error);
+        console.error('AniList API error for schedule:', error.message, error.response?.data);
+        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime schedule. Please try again later.</p>';
         return [];
       }
     }
@@ -523,6 +540,7 @@
       const accessToken = await getAniListAccessToken();
       if (!accessToken) {
         console.error('No access token available for anime releases');
+        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime releases. Please try again later.</p>';
         return [];
       }
 
@@ -561,7 +579,8 @@
             };
           });
       } catch (error) {
-        console.error('AniList API error for releases:', error);
+        console.error('AniList API error for releases:', error.message, error.response?.data);
+        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime releases. Please try again later.</p>';
         return [];
       }
     }
@@ -627,6 +646,7 @@
           }
         });
       }
+      renderUrlList(); // Initial render of saved URLs
     });
 
     function convertJSTtoLocal(day, timeJST) {
@@ -999,33 +1019,42 @@
     async function render() {
       const hash = window.location.hash;
       const app = document.getElementById('app');
-      if (hash.startsWith('#page=channel/')) {
-        const tvgId = hash.split('#page=channel/')[1];
-        app.innerHTML = renderChannel(tvgId);
-        const video = document.getElementById('video-player');
-        const channel = channels.find(ch => ch.tvgId === tvgId);
-        if (channel) {
-          initHLS(video, channel.url, tvgId);
-        }
-        document.getElementById('subtitle-toggle')?.addEventListener('change', () => {
-          if (recognition) {
-            if (document.getElementById('subtitle-toggle').checked) {
-              recognition.start();
-            } else {
-              recognition.stop();
-            }
-          }
-        });
-        document.getElementById('autoplay-toggle')?.addEventListener('change', () => initAutoplay(tvgId));
-      } else if (hash === '#page=anime') {
-        app.innerHTML = await renderAnimePage();
-        setTimeout(initSlider, 0);
-      } else {
-        app.innerHTML = renderHome();
+      if (!app) {
+        console.error('App container not found');
+        return;
       }
-      renderUrlList();
-      document.getElementById('search')?.addEventListener('input', render);
-      document.getElementById('category')?.addEventListener('change', render);
+      try {
+        if (hash.startsWith('#page=channel/')) {
+          const tvgId = hash.split('#page=channel/')[1];
+          app.innerHTML = renderChannel(tvgId);
+          const video = document.getElementById('video-player');
+          const channel = channels.find(ch => ch.tvgId === tvgId);
+          if (channel) {
+            initHLS(video, channel.url, tvgId);
+          }
+          document.getElementById('subtitle-toggle')?.addEventListener('change', () => {
+            if (recognition) {
+              if (document.getElementById('subtitle-toggle').checked) {
+                recognition.start();
+              } else {
+                recognition.stop();
+              }
+            }
+          });
+          document.getElementById('autoplay-toggle')?.addEventListener('change', () => initAutoplay(tvgId));
+        } else if (hash === '#page=anime') {
+          app.innerHTML = await renderAnimePage();
+          setTimeout(initSlider, 0);
+        } else {
+          app.innerHTML = renderHome();
+        }
+        renderUrlList();
+        document.getElementById('search')?.addEventListener('input', render);
+        document.getElementById('category')?.addEventListener('change', render);
+      } catch (error) {
+        console.error('Render error:', error);
+        app.innerHTML = '<p class="text-red-500">An error occurred while loading the page. Please try again.</p>';
+      }
     }
 
     window.prevSlide = prevSlide;
@@ -1035,14 +1064,21 @@
     window.toggleMenu = toggleMenu;
     window.deleteM3UUrl = deleteM3UUrl;
 
-    // Initialize the app
     async function init() {
-      await loadSavedPlaylists();
-      render();
+      try {
+        await loadSavedPlaylists();
+        await render();
+      } catch (error) {
+        console.error('Init error:', error);
+        const app = document.getElementById('app');
+        if (app) {
+          app.innerHTML = '<p class="text-red-500">Failed to initialize the app. Please try again.</p>';
+        }
+      }
     }
 
     window.addEventListener('hashchange', render);
-    init();
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
