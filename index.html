@@ -9,25 +9,15 @@
   <link rel="icon" type="image/png" href="Picsart_25-04-17_13-59-41-759.png">
   <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&display=swap" rel="stylesheet">
+  <script src="player.js"></script>
   <style>
     body { background: linear-gradient(to bottom, #1a202c, #2d3748); color: #e2e8f0; }
-    video { 
-      width: 100%; 
-      max-width: 1200px; 
-      height: auto; 
-      aspect-ratio: 16/9; 
-      display: block; 
-      margin: 0 auto;
-    }
+    video { width: 100%; max-width: 1200px; height: auto; aspect-ratio: 16/9; }
     .channel-card, .anime-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-    .channel-card:hover, .anime-card:hover { transform: scale(1.05); box-shadow: 0 8px 16px rgba(153, 8, 8, 0.2); }
+    .channel-card:hover, .anime-card:hover { transform: scale(1.05); box-shadow: 0 8px 16px rgba(153, 8, 8, 0); }
     .page-transition { animation: fadeIn 0.5s ease-in; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .hero-bg { 
-      background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://i.fod.fujitv.co.jp/website/img/top/mv_logout_sp.png'); 
-      background-size: cover; 
-      background-position: center;
-    }
+    .hero-bg { background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://i.fod.fujitv.co.jp/website/img/top/mv_logout_sp.png'); }
     .subtitle-overlay {
       position: absolute;
       top: 0;
@@ -38,86 +28,30 @@
       padding: 8px;
       border-radius: 4px;
       font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: clamp(16px, 5vw, 20px);
+      font-size: 25px;
       font-weight: 900;
       color: #ffffff;
-      -webkit-text-stroke: 2px #000000;
+      -webkit-text-stroke: 6px #000000;
     }
-    .schedule-table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      font-size: clamp(12px, 3vw, 14px);
-    }
-    .schedule-table th, .schedule-table td { 
-      border: 1px solid #4a5568; 
-      padding: 8px; 
-      text-align: left;
-    }
+    .schedule-table { width: 100%; border-collapse: collapse; }
+    .schedule-table th, .schedule-table td { border: 1px solid #4a5568; padding: 8px; text-align: left; }
     .schedule-table th { background: #2d3748; }
     .schedule-table tr:hover { background: #4a5568; }
-    .nav-menu {
-      transition: transform 0.3s ease-in-out;
-    }
-    .nav-menu.hidden {
-      transform: translateX(100%);
-    }
-    .hamburger {
-      display: none;
-    }
-    @media (max-width: 768px) {
-      .hamburger {
-        display: block;
-        cursor: pointer;
-      }
-      .nav-menu {
-        position: fixed;
-        top: 0;
-        right: 0;
-        height: 100%;
-        width: 75%;
-        max-width: 300px;
-        background: #1a202c;
-        padding: 2rem;
-        z-index: 20;
-      }
-      .nav-menu.hidden {
-        display: none;
-      }
-      .nav-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 10;
-        display: none;
-      }
-      .nav-overlay.active {
-        display: block;
-      }
-    }
+    @media (max-width: 640px) { video { max-width: 100%; } .hero-bg { background-size: cover; } }
     .slider-container {
       position: relative;
       width: 100%;
       overflow: hidden;
       margin-bottom: 2rem;
-      touch-action: pan-y;
     }
     .slider {
       display: flex;
       transition: transform 0.5s ease;
-      will-change: transform;
     }
     .slider-item {
       min-width: 200px;
       margin-right: 1rem;
       flex: 0 0 auto;
-    }
-    @media (max-width: 640px) {
-      .slider-item {
-        min-width: 150px;
-      }
     }
     .slider-nav {
       position: absolute;
@@ -160,463 +94,163 @@
     .slider-dot.active {
       background: #e53e3e;
     }
-    @media (max-width: 768px) {
-      .container {
-        padding-left: 1rem;
-        padding-right: 1rem;
-      }
-      .grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      }
-      .hero-bg {
-        height: 60vw;
-      }
-      .hero-bg h1 {
-        font-size: 1.5rem;
-      }
-      .hero-bg p {
-        font-size: 0.875rem;
-      }
-      video {
-        max-width: 100%;
-      }
+    /* Styles for player controls visibility */
+    .player-controls {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none; /* Disable clicks when hidden */
     }
-    @media (max-width: 640px) {
-      .grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      }
-      .channel-card img {
-        height: 80px;
-      }
-      .anime-card img {
-        height: 120px;
-      }
+    .player-controls.visible {
+      opacity: 1;
+      pointer-events: auto; /* Enable clicks when visible */
     }
-    .url-list {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #2d3748;
-      border-radius: 8px;
-      padding: 1rem;
+    /* Remove the direct hover rule from CSS */
+    /* .player-container:hover .player-controls { opacity: 1; } */
+
+    /* Ensure controls are hidden in fullscreen unless hovered */
+    .player-container:fullscreen .player-controls {
+      opacity: 0;
+      pointer-events: none;
     }
-    .url-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #4a5568;
+    .player-container:-webkit-full-screen .player-controls {
+      opacity: 0;
+      pointer-events: none;
     }
-    .url-item:last-child {
-      border-bottom: none;
+    .player-container:-moz-full-screen .player-controls {
+      opacity: 0;
+      pointer-events: none;
     }
-    .delete-btn {
-      transition: color 0.2s ease;
+
+    /* Show controls on hover in fullscreen */
+    .player-container:fullscreen:hover .player-controls {
+      opacity: 1;
+      pointer-events: auto;
     }
-    .delete-btn:hover {
-      color: #f87171;
+     .player-container:-webkit-full-screen:hover .player-controls {
+      opacity: 1;
+      pointer-events: auto;
     }
-    .m3u-section {
-      background: #2d3748;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
+     .player-container:-moz-full-screen:hover .player-controls {
+      opacity: 1;
+      pointer-events: auto;
     }
+
   </style>
 </head>
 <body class="min-h-screen">
   <nav class="sticky top-0 bg-gray-900 shadow-lg z-10">
     <div class="container mx-auto px-4 py-3 flex items-center justify-between">
       <a href="#" class="text-2xl font-bold text-red-500">ネコストリーム</a>
-      <button class="hamburger md:hidden" onclick="toggleMenu()">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-      <div class="nav-menu hidden md:flex md:items-center md:space-x-4 fixed md:static top-0 right-0 h-full md:h-auto bg-gray-900 md:bg-transparent p-6 md:p-0 z-20">
-        <a href="#page=anime" class="text-white hover:text-red-500 block md:inline-block mb-4 md:mb-0">Anime</a>
-        <input type="text" id="search" placeholder="Search channels..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500 w-full md:w-auto mb-4 md:mb-0">
-        <select id="category" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none w-full md:w-auto">
+      <div class="flex items-center space-x-4">
+        <a href="#page=anime" class="text-white hover:text-red-500">Anime</a>
+        <input type="text" id="search" placeholder="Search channels..." class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500">
+        <select id="category" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none">
           <option value="">All Categories</option>
           <option value="Favorites">Favorites</option>
+          <option value="Tokyo">Tokyo</option>
+          <option value="Kansai">Kansai</option>
+          <option value="BS">BS</option>
+          <option value="BS2">BS2</option>
+          <option value="CS">CS</option>
         </select>
       </div>
     </div>
   </nav>
-  <div class="nav-overlay" onclick="toggleMenu()"></div>
-  <div class="container mx-auto px-4 py-6">
-    <div class="m3u-section mb-6">
-      <h2 class="text-xl font-semibold mb-2">Add .m3u Playlist</h2>
-      <div class="flex flex-col md:flex-row md:items-center gap-2">
-        <input type="text" id="m3u-url" placeholder="Enter .m3u URL (e.g., https://raw.githubusercontent.com/luongz/iptv-jp/main/jp.m3u)" class="px-3 py-2 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-red-500 w-full md:w-1/2">
-        <button onclick="loadM3U()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Load Playlist</button>
-      </div>
-      <div id="url-error" class="text-red-500 mt-2 hidden"></div>
-      <h3 class="text-lg font-semibold mt-4 mb-2">Saved Playlists</h3>
-      <div id="url-list" class="url-list"></div>
-    </div>
-    <div id="app"></div>
-  </div>
+  <div id="app" class="container mx-auto px-4 py-6"></div>
 
   <script>
-    function toggleMenu() {
-      const menu = document.querySelector('.nav-menu');
-      const overlay = document.querySelector('.nav-overlay');
-      menu.classList.toggle('hidden');
-      overlay.classList.toggle('active');
-    }
+    const apiUrl = 'https://graphql.anilist.co';
+    // IMPORTANT: Replace with the actual, FULL URL of your deployed Supabase Edge Function,
+    // including /functions/v1/
+    // Example: https://[your-project-ref].functions.supabase.co/playlist-proxy
+    const proxyBaseUrl = 'https://omlthoayovedvgktbbjl.supabase.co/functions/v1/playlist-proxy'; // Corrected format example
 
-    const API_KEY = 'nekostream-secure-key-2025';
-    const PROXY_PLAYLIST_URL = '/api/playlist-proxy?type=playlist&apiKey=' + encodeURIComponent(API_KEY);
+    const channels = [
+      { group: "Tokyo", tvgId: "nhkg_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/NHK%E7%B7%8F%E5%90%88%E3%83%AD%E3%83%B42020-.png", name: "NHK G", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/NHK_G/index.m3u8`, scheduleUrl: "https://www.nhk.or.jp/program/" },
+      { group: "Tokyo", tvgId: "nhke_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/a/aa/NHKE%E3%83%86%E3%83%AC%E3%83%AD%E3%83%AD%E3%83%B42020-.png", name: "NHK E", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/NHK_E/index.m3u8`, scheduleUrl: "https://www.nhk.or.jp/school/program/" },
+      { group: "Tokyo", tvgId: "ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nippon_TV_logo_2014.svg/2560px-Nippon_TV_logo_2014.svg.png", name: "NTV", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/Nippon_TV/index.m3u8`, scheduleUrl: "https://www.ntv.co.jp/schedule/" },
+      { group: "Tokyo", tvgId: "tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Tokyo_Broadcasting_System_logo_2020.svg/2560px-Tokyo_Broadcasting_System_logo_2020.svg.png", name: "TBS", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/TBS/index.m3u8`, scheduleUrl: "https://www.tbs.co.jp/tv/" },
+      { group: "Tokyo", tvgId: "fuji_tv", logo: "https://upload.wikimedia.org/wikipedia/fr/thumb/6/65/Fuji_TV_Logo.svg/1049px-Fuji_TV_Logo.svg.png", name: "Fuji TV", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/Fuji_TV/index.m3u8`, scheduleUrl: "https://www.fujitv.co.jp/timetable/" },
+      { group: "Tokyo", tvgId: "tv_asahi", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/TV_Asahi_Logo.svg/2560px-TV_Asahi_Logo.svg.png", name: "TV Asahi", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/TV_Asahi/index.m3u8`, scheduleUrl: "https://www.tv-asahi.co.jp/bangumi/" },
+      { group: "Tokyo", tvgId: "tv_tokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/TV_Tokyo_logo_2023.svg/2560px-TV_Tokyo_logo_2023.svg.png", name: "TV Tokyo", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/TV_Tokyo/index.m3u8`, scheduleUrl: "https://www.tv-tokyo.co.jp/timetable/" },
+      { group: "Tokyo", tvgId: "tokyo_mx", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Tokyo_metropolitan_television_logo_%28rainbow%29.svg/2560px-Tokyo_metropolitan_television_logo_%28rainbow%29.svg.png", name: "TOKYO MX1", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/Tokyo_MX1/index.m3u8`, scheduleUrl: "https://s.mxtv.jp/bangumi/" },
+      { group: "Kansai", tvgId: "mbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Mainichi_Broadcasting_System_logo.svg/1920px-Mainichi_Broadcasting_System_logo.svg.png", name: "MBS", url: `${proxyBaseUrl}?url=http://luong.utako.moe/mbs/index.m3u8`, scheduleUrl: "https://www.mbs.jp/schedule/" },
+      { group: "Kansai", tvgId: "abc", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Asahi_Broadcasting_Corporation_Logo.svg/261px-Asahi_Broadcasting_Corporation_Logo.svg.png", name: "ABC", url: `${proxyBaseUrl}?url=http://luong.utako.moe/abc/index.m3u8`, scheduleUrl: "https://www.asahi.co.jp/timetable/" },
+      { group: "Kansai", tvgId: "tv_osaka", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Tv_osaka_logo.svg/178px-Tv_osaka_logo.svg.png", name: "TV Osaka", url: `${proxyBaseUrl}?url=http://luong.utako.moe/tvo/index.m3u8`, scheduleUrl: "https://www.tv-osaka.co.jp/onair/" },
+      { group: "Kansai", tvgId: "kansai_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Ktv_logo.svg/200px-Ktv_logo.svg.png", name: "Kansai TV", url: `${proxyBaseUrl}?url=http://luong.utako.moe/kansaitv/index.m3u8`, scheduleUrl: "https://www.ktv.jp/timetable/" },
+      { group: "Kansai", tvgId: "ytv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Yomiuri_Telecasting_Corporation_Logo.svg/150px-Yomiuri_Telecasting_Corporation_Logo.svg.png", name: "ytv", url: `${proxyBaseUrl}?url=http://luong.utako.moe/ytv/index.m3u8`, scheduleUrl: "https://www.ytv.co.jp/timetable/" },
+      { group: "Kansai", tvgId: "kbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Kbs_logo.svg/250px-Kbs_logo.svg.png", name: "KBS", url: `${proxyBaseUrl}?url=http://luong.utako.moe/kbs/index.m3u8`, scheduleUrl: "https://www.kbs-kyoto.co.jp/tv/timetable/" },
+      { group: "Kansai", tvgId: "sun_tv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/SUN-TV_wordmark_2019.png/180px-SUN-TV_wordmark_2019.png", name: "SUN", url: `${proxyBaseUrl}?url=http://luong.utako.moe/suntv/index.m3u8`, scheduleUrl: "https://www.sun-tv.co.jp/program" },
+      { group: "BS", tvgId: "nhk_bs", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/NHK_BS.png", name: "NHK BS", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/NHK_BS/index.m3u8`, scheduleUrl: "https://www.nhk.or.jp/bs/" },
+      { group: "BS", tvgId: "animax", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Animax.svg/1920px-Animax.svg.png", name: "Animax", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/Animax/index.m3u8`, scheduleUrl: "https://www.animax.co.jp/schedule/" },
+      { group: "BS", tvgId: "BS11.jp", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/BS11_logo.svg/2560px-BS11_logo.svg.png", name: "BS11", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/BS11/index.m3u8`, scheduleUrl: "https://www.bs11.jp/program/" },
+      { group: "BS2", tvgId: "nhk_bsp4k", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/NHK_BSP4K_2023_logo.svg/1920px-NHK_BSP4K_2023_logo.svg.png", name: "NHK BS4K", url: `${proxyBaseUrl}?url=http://luong.utako.moe/bsp4k/index.m3u8`, scheduleUrl: "https://www.nhk.or.jp/bs4k/" },
+      { group: "BS2", tvgId: "bs_ntv", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/BS4_logo.svg/2560px-BS4_logo.svg.png", name: "BS NTV", url: `${proxyBaseUrl}?url=http://luong.utako.moe/bsntv/index.m3u8`, scheduleUrl: "https://www.bs4.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_asahi", logo: "https://www.bs-asahi.co.jp/wp-content/uploads/2021/06/oglogo.jpg", name: "BS Asahi", url: `${proxyBaseUrl}?url=http://luong.utako.moe/bsasahi/index.m3u8`, scheduleUrl: "https://www.bs-asahi.co.jp/schedule/" },
+      { group: "BS2", tvgId: "bs_tbs", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/BS-TBS_2020.svg/1920px-BS-TBS_2020.svg.png", name: "BS TBS", url: `${proxyBaseUrl}?url=http://luong.utako.moe/bstbs/index.m3u8`, scheduleUrl: "https://www.bstbs.co.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_tvtokyo", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/BS_TV_Tokyo_%28Japanese%29_2023.svg/1920px-BS_TV_Tokyo_%28Japanese%29_2023.svg.png", name: "BS TV Tokyo", url: `${proxyBaseUrl}?url=http://luong.utako.moe/bstvtokyo/index.m3u8`, scheduleUrl: "https://www.bs-tvtokyo.co.jp/timetable/" },
+      { group: "BS2", tvgId: "bs_fuji", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/74/BSFuji2008Symbol.svg/1280px-BSFuji2008Symbol.svg.png", name: "BS Fuji", url: `${proxyBaseUrl}?url=http://luong.utako.moe/bsfuji/index.m3u8`, scheduleUrl: "https://www.bsfuji.tv/schedule/" },
+      { group: "BS2", tvgId: "wowow_prime", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_prime.png", name: "WOWOW Prime", url: `${proxyBaseUrl}?url=http://luong.utako.moe/wprime/index.m3u8`, scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "wowow_cinema", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_cinema.png", name: "WOWOW Cinema", url: `${proxyBaseUrl}?url=http://luong.utako.moe/wcinema/index.m3u8`, scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "wowow_live", logo: "https://www.lyngsat.com/logo/tv/ww/wowow_live.png", name: "WOWOW Live", url: `${proxyBaseUrl}?url=http://luong.utako.moe/wlive/index.m3u8`, scheduleUrl: "https://www.wowow.co.jp/schedule/" },
+      { group: "BS2", tvgId: "js1", logo: "https://www.starcat.co.jp/ch/upload/channel/69/jsports1_logo.jpg", name: "JSport 1", url: `${proxyBaseUrl}?url=http://luong.utako.moe/js1/index.m3u8`, scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js2", logo: "https://www.starcat.co.jp/ch/upload/channel/70/jsports2_logo.jpg", name: "JSport 2", url: `${proxyBaseUrl}?url=http://luong.utako.moe/js2/index.m3u8`, scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js3", logo: "https://www.starcat.co.jp/ch/upload/channel/71/jsports3_logo.jpg", name: "JSport 3", url: `${proxyBaseUrl}?url=http://luong.utako.moe/js3/index.m3u8`, scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "BS2", tvgId: "js4", logo: "https://www.starcat.co.jp/ch/upload/channel/74/jsports4_logo.jpg", name: "JSport 4", url: `${proxyBaseUrl}?url=http://luong.utako.moe/js4/index.m3u8`, scheduleUrl: "https://www.jsports.co.jp/program_guide/" },
+      { group: "CS", tvgId: "at-x", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/AT-X_logo.svg/2560px-AT-X_logo.svg.png", name: "AT-X", url: `${proxyBaseUrl}?url=http://vthanh.utako.moe/AT-X/index.m3u8`, scheduleUrl: "https://www.at-x.com/program/" },
+      // QVC URL is already HTTPS, no proxy needed for this one
+      { group: "CS", tvgId: "qvc", logo: "https://brandlogos.net/wp-content/uploads/2012/12/qvc-logo-vector-400x400.png", name: "QVC", url: "https://cdn-live1.qvc.jp/iPhone/1501/1501.m3u8", scheduleUrl: "https://qvc.jp/content/shop/schedule.html" },
+      { group: "CS", tvgId: "space_shower", logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/SPACE_SHOWER_TV.jpg", name: "Space Shower TV", url: `${proxyBaseUrl}?url=http://luong.utako.moe/spaceshower/index.m3u8`, scheduleUrl: "https://www.spaceshowertv.com/program/" },
+      { group: "CS", tvgId: "tbs_ch1", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-1-jp.png", name: "TBS Channel 1", url: `${proxyBaseUrl}?url=http://luong.utako.moe/tbsch1/index.m3u8`, scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" },
+      { group: "CS", tvgId: "tbs_ch2", logo: "https://www.lyngsat.com/logo/tv/tt/tbs-channel-2-jp.png", name: "TBS Channel 2", url: `${proxyBaseUrl}?url=http://luong.utako.moe/tbsch2/index.m3u8`, scheduleUrl: "https://www.tbs.co.jp/tbschannel/schedule/" }
+    ];
 
-    const scheduleUrls = {
-      "nhkg_tokyo": "https://www.nhk.or.jp/program/",
-      "nhke_tokyo": "https://www.nhk.or.jp/school/program/",
-      "ntv": "https://www.ntv.co.jp/schedule/",
-      "tbs": "https://www.tbs.co.jp/tv/",
-      "fuji_tv": "https://www.fujitv.co.jp/timetable/",
-      "tv_asahi": "https://www.tv-asahi.co.jp/bangumi/",
-      "tv_tokyo": "https://www.tv-tokyo.co.jp/timetable/",
-      "tokyo_mx": "https://s.mxtv.jp/bangumi/",
-      "mbs": "https://www.mbs.jp/schedule/",
-      "abc": "https://www.asahi.co.jp/timetable/",
-      "tv_osaka": "https://www.tv-osaka.co.jp/onair/",
-      "kansai_tv": "https://www.ktv.jp/timetable/",
-      "ytv": "https://www.ytv.co.jp/timetable/",
-      "kbs": "https://www.kbs-kyoto.co.jp/tv/timetable/",
-      "sun_tv": "https://www.sun-tv.co.jp/program",
-      "nhk_bs": "https://www.nhk.or.jp/bs/",
-      "animax": "https://www.animax.co.jp/schedule/",
-      "BS11.jp": "https://www.bs11.jp/program/",
-      "nhk_bsp4k": "https://www.nhk.or.jp/bs4k/",
-      "bs_ntv": "https://www.bs4.jp/timetable/",
-      "bs_asahi": "https://www.bs-asahi.co.jp/schedule/",
-      "bs_tbs": "https://www.bstbs.co.jp/timetable/",
-      "bs_tvtokyo": "https://www.bs-tvtokyo.co.jp/timetable/",
-      "bs_fuji": "https://www.bsfuji.tv/schedule/",
-      "wowow_prime": "https://www.wowow.co.jp/schedule/",
-      "wowow_cinema": "https://www.wowow.co.jp/schedule/",
-      "wowow_live": "https://www.wowow.co.jp/schedule/",
-      "js1": "https://www.jsports.co.jp/program_guide/",
-      "js2": "https://www.jsports.co.jp/program_guide/",
-      "js3": "https://www.jsports.co.jp/program_guide/",
-      "js4": "https://www.jsports.co.jp/program_guide/",
-      "at-x": "https://www.at-x.com/program/",
-      "qvc": "https://qvc.jp/content/shop/schedule.html",
-      "space_shower": "https://www.spaceshowertv.com/program/",
-      "tbs_ch1": "https://www.tbs.co.jp/tbschannel/schedule/",
-      "tbs_ch2": "https://www.tbs.co.jp/tbschannel/schedule/"
-    };
-
-    function parseM3U(content) {
-      const lines = content.split('\n').map(line => line.trim());
-      const channels = [];
-      let currentChannel = null;
-
-      for (const line of lines) {
-        if (line.startsWith('#EXTINF')) {
-          currentChannel = {};
-          const attributes = line.match(/([a-zA-Z-]+)="([^"]+)"/g) || [];
-          attributes.forEach(attr => {
-            const [, key, value] = attr.match(/([a-zA-Z-]+)="([^"]+)"/);
-            currentChannel[key] = value;
-          });
-          const nameMatch = line.match(/,(.+)$/) || [];
-          currentChannel.name = nameMatch[1] ? nameMatch[1].trim() : 'Unknown';
-        } else if (line && !line.startsWith('#') && currentChannel) {
-          currentChannel.url = line;
-          const streamType = line.toLowerCase().endsWith('.m3u8') ? 'hls' : 'http';
-          channels.push({
-            group: currentChannel['group-title'] || 'Other',
-            tvgId: currentChannel['tvg-id'] || currentChannel.name.toLowerCase().replace(/\s+/g, '_'),
-            logo: currentChannel['tvg-logo'] || 'https://placehold.co/150x150?text=No+Logo',
-            name: currentChannel.name,
-            url: currentChannel.url,
-            scheduleUrl: scheduleUrls[currentChannel['tvg-id']] || '',
-            streamType
-          });
-          currentChannel = null;
-        }
-      }
-
-      return channels;
-    }
-
-    async function fetchChannels(url) {
-      const errorElement = document.getElementById('url-error');
-      try {
-        const headers = url === PROXY_PLAYLIST_URL ? { 'X-API-Key': API_KEY } : {};
-        const response = await axios.get(url, {
-          headers: { 'Accept': 'text/plain', ...headers }
-        });
-        errorElement.classList.add('hidden');
-        return parseM3U(response.data);
-      } catch (error) {
-        console.error('Error fetching M3U playlist:', error);
-        errorElement.textContent = 'Failed to load playlist. Please check the URL and try again.';
-        errorElement.classList.remove('hidden');
-        return [];
-      }
-    }
-
-    function saveM3UUrl(url) {
-      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
-      if (!savedUrls.includes(url)) {
-        savedUrls.push(url);
-        localStorage.setItem('m3uUrls', JSON.stringify(savedUrls));
-        renderUrlList();
-      }
-    }
-
-    function deleteM3UUrl(url) {
-      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
-      const updatedUrls = savedUrls.filter(u => u !== url);
-      localStorage.setItem('m3uUrls', JSON.stringify(updatedUrls));
-      renderUrlList();
-      loadSavedPlaylists();
-    }
-
-    async function loadM3U() {
-      const urlInput = document.getElementById('m3u-url');
-      const url = urlInput.value.trim();
-      if (!url) {
-        document.getElementById('url-error').textContent = 'Please enter a valid .m3u URL.';
-        document.getElementById('url-error').classList.remove('hidden');
-        return;
-      }
-
-      const newChannels = await fetchChannels(url);
-      if (newChannels.length > 0) {
-        const shouldSave = confirm('Do you want to save this playlist URL for future use?');
-        if (shouldSave) {
-          saveM3UUrl(url);
-        }
-        channels = [...new Set([...channels, ...newChannels].map(ch => JSON.stringify(ch)))].map(ch => JSON.parse(ch));
-        updateCategoryDropdown();
-        render();
-      }
-    }
-
-    function renderUrlList() {
-      const urlList = document.getElementById('url-list');
-      if (!urlList) {
-        console.error('URL list element not found');
-        return;
-      }
-      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
-      urlList.innerHTML = savedUrls.length > 0 ? savedUrls.map(url => `
-        <div class="url-item">
-          <span class="text-sm truncate">${url}</span>
-          <button onclick="deleteM3UUrl('${url.replace(/'/g, "\\'")}')" class="delete-btn text-red-500 hover:text-red-700">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      `).join('') : '<p class="text-gray-400">No saved playlists.</p>';
-    }
-
-    async function loadSavedPlaylists() {
-      channels = [];
-      // Always load the proxied playlist first
-      const proxyChannels = await fetchChannels(PROXY_PLAYLIST_URL);
-      if (proxyChannels.length > 0) {
-        channels = [...proxyChannels];
-      }
-
-      // Load additional user-saved playlists
-      const savedUrls = JSON.parse(localStorage.getItem('m3uUrls')) || [];
-      for (const url of savedUrls) {
-        const newChannels = await fetchChannels(url);
-        if (newChannels.length > 0) {
-          channels = [...new Set([...channels, ...newChannels].map(ch => JSON.stringify(ch)))].map(ch => JSON.parse(ch));
-        }
-      }
-      updateCategoryDropdown();
-      render();
-    }
-
-    function updateCategoryDropdown() {
-      const categorySelect = document.getElementById('category');
-      if (categorySelect) {
-        const groups = ['Favorites', ...new Set(channels.map(ch => ch.group))];
-        categorySelect.innerHTML = `<option value="">All Categories</option>` + 
-          groups.map(group => `<option value="${group}">${group}</option>`).join('');
-      }
-    }
-
-    const ANILIST_API_URL = 'https://graphql.anilist.co';
-    const ANILIST_CLIENT_ID = '26437';
-    const ANILIST_CLIENT_SECRET = 'bqRe9mNhwhADEVkO6DAO6mg6cdcMoyXWSq96QShx';
-
-    async function getAniListAccessToken() {
-      try {
-        const response = await axios.post('/api/proxy', {
-          url: 'https://anilist.co/api/v2/oauth/token',
-          method: 'POST',
-          data: {
-            grant_type: 'client_credentials',
-            client_id: ANILIST_CLIENT_ID,
-            client_secret: ANILIST_CLIENT_SECRET
-          }
-        });
-        return response.data.access_token;
-      } catch (error) {
-        console.error('Error fetching AniList access token:', error.message, error.response?.data);
-        return null;
-      }
-    }
-
-    async function fetchAnimeSchedule() {
-      const accessToken = await getAniListAccessToken();
-      if (!accessToken) {
-        console.error('No access token available for anime schedule');
-        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime schedule. Please try again later.</p>';
-        return [];
-      }
-
-      const query = `
-        query {
-          Page(page: 1, perPage: 50) {
-            media(season: SPRING, seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
-              id
-              title { romaji }
-              startDate { year month day }
-              airingSchedule(notYetAired: true, perPage: 1) {
-                nodes {
-                  airingAt
-                  episode
-                }
-              }
-            }
-          }
-        }
-      `;
-
-      try {
-        const response = await axios.post(ANILIST_API_URL, { query }, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        });
-        const media = response.data.data.Page.media;
-        const channelMap = channels.reduce((map, channel) => {
-          const name = channel.name.toLowerCase().replace(/\s+/g, '');
-          map[name] = channel.tvgId;
-          return map;
-        }, {
-          "onepiece": "fuji_tv",
-          "kingdom": "nhkg_tokyo",
-          "kaijuno8": "tv_tokyo",
-          "konosuba": "tokyo_mx",
-          "mushokutensei": "tokyo_mx",
-          "yurucamp": "at-x",
-          "asignofaffection": "tokyo_mx",
-          "spiceandwolf": "tv_tokyo",
-          "thedukeofdeathandhismaid": "tokyo_mx",
-          "re:monster": "tokyo_mx",
-          "unnamedmemory": "at-x",
-          "blackbutler": "tokyo_mx",
-          "tonarinoyoukai-san": "at-x",
-          "girlsbandcry": "tokyo_mx",
-          "kuramerukagari": "tokyo_mx",
-          "themanySidesofvoiceactorradio": "at-x",
-          "chiyumahounomachigattatsukai-kata": "tokyo_mx",
-          "ookamitokoshinryo": "tv_tokyo",
-          "uchuujinmuumuu": "at-x"
-        });
-
-        return media
-          .map(item => {
-            const airing = item.airingSchedule.nodes[0];
-            if (!airing) return null;
-            const date = new Date(airing.airingAt * 1000);
-            const day = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' });
-            const timeJST = date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' });
-            const titleKey = item.title.romaji.toLowerCase().replace(/\s+/g, '');
-            return {
-              title: item.title.romaji,
-              channelId: channelMap[titleKey] || channelMap[item.title.romaji.toLowerCase().replace(/[^a-z0-9]/g, '')] || "tokyo_mx",
-              day,
-              timeJST
-            };
-          })
-          .filter(item => item);
-      } catch (error) {
-        console.error('AniList API error for schedule:', error.message, error.response?.data);
-        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime schedule. Please try again later.</p>';
-        return [];
-      }
-    }
-
-    async function fetchAnimeReleases() {
-      const accessToken = await getAniListAccessToken();
-      if (!accessToken) {
-        console.error('No access token available for anime releases');
-        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime releases. Please try again later.</p>';
-        return [];
-      }
-
-      const query = `
-        query {
-          Page(page: 1, perPage: 100) {
-            media(seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
-              id
-              title { romaji }
-              startDate { year month day }
-              coverImage { large }
-              season
-            }
-          }
-        }
-      `;
-
-      try {
-        const response = await axios.post(ANILIST_API_URL, { query }, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        });
-        const media = response.data.data.Page.media;
-        return media
-          .filter(item => item.startDate.year === 2025 && item.startDate.month && item.startDate.day)
-          .map(item => {
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            const premiere = `${monthNames[item.startDate.month - 1]} ${item.startDate.year}`;
-            return {
-              title: item.title.romaji,
-              premiere,
-              thumbnail: item.coverImage.large || 'https://placehold.co/200x300?text=No+Image'
-            };
-          });
-      } catch (error) {
-        console.error('AniList API error for releases:', error.message, error.response?.data);
-        document.getElementById('app').innerHTML += '<p class="text-red-500">Failed to load anime releases. Please try again later.</p>';
-        return [];
-      }
-    }
-
-    let channels = [];
     const featuredChannels = ['animax', 'at-x', 'nhkg_tokyo', 'tokyo_mx'];
     const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-    const GAS_KEY = 'AKfycbxMW32ItfACH8tkS4W0p_Kwkx36SLWX5_uWAooYpuB44KZdL2daR50Qas_gWXYr_j8t7Q';
-    let recognition = null;
-    let subtitleTimeout = null;
+    let playerInstance = null;
+
+    const fallbackAnimeSchedule = [
+      { title: "One Piece", channelId: "fuji_tv", day: "Sunday", timeJST: "09:30" },
+      { title: "Uchuujin MuuMuu", channelId: "at-x", day: "Friday", timeJST: "22:30" },
+      { title: "Kingdom Season 5", channelId: "nhkg_tokyo", day: "Sunday", timeJST: "24:00" },
+      { title: "Kaiju No. 8", channelId: "tv_tokyo", day: "Saturday", timeJST: "23:00" },
+      { title: "Konosuba: An Explosion on This Wonderful World!", channelId: "tokyo_mx", day: "Wednesday", timeJST: "23:30" },
+      { title: "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", channelId: "tokyo_mx", day: "Sunday", timeJST: "24:30" },
+      { title: "Yuru Camp△ Season 3", channelId: "at-x", day: "Sunday", timeJST: "23:30" },
+      { title: "A Sign of Affection", channelId: "tokyo_mx", day: "Saturday", timeJST: "22:30" },
+      { title: "Spice and Wolf: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" },
+      { title: "The Duke of Death and His Maid Season 3", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:00" },
+      { title: "Re:Monster", channelId: "tokyo_mx", day: "Monday", timeJST: "24:00" },
+      { title: "Unnamed Memory", channelId: "at-x", day: "Tuesday", timeJST: "23:30" },
+      { title: "Black Butler: Public School Arc", channelId: "tokyo_mx", day: "Saturday", timeJST: "23:30" },
+      { title: "Tonari no Youkai-san", channelId: "at-x", day: "Saturday", timeJST: "21:00" },
+      { title: "Girls Band Cry", channelId: "tokyo_mx", day: "Sunday", timeJST: "22:30" },
+      { title: "Kuramerukagari", channelId: "tokyo_mx", day: "Friday", timeJST: "25:05" },
+      { title: "The Many Sides of Voice Actor Radio", channelId: "at-x", day: "Wednesday", timeJST: "23:00" },
+      { title: "Chiyu Mahou no Machigatta Tsukai-kata", channelId: "tokyo_mx", day: "Friday", timeJST: "24:30" },
+      { title: "Ookami to Koshinryo: Merchant Meets the Wise Wolf", channelId: "tv_tokyo", day: "Monday", timeJST: "25:30" },
+      { title: "WITCH WATCH", channelId: "tokyo_mx", day: "Monday", timeJST: "26:00" },
+      { title: "Mobile Suit Gundam GQuuuuuuX", channelId: "tokyo_mx", day: "Friday", timeJST: "25:20" },
+      { title: "The Beginning After the End", channelId: "tbs", day: "Monday", timeJST: "24:30" },
+      { title: "Kanchigai no Atelier Meister", channelId: "tokyo_mx", day: "Monday", timeJST: "26:00" },
+      { title: "I'm the Evil Lord of an Intergalactic Empire!", channelId: "tokyo_mx", day: "Tuesday", timeJST: "24:30" }
+    ];
 
     let currentSlide = 0;
     const slidesPerView = 5;
 
     function initSlider() {
       const slider = document.querySelector('.slider');
+      if (!slider) return;
       const items = document.querySelectorAll('.slider-item');
       const dots = document.querySelectorAll('.slider-dot');
-      
-      const slideWidth = items[0]?.offsetWidth + 16 || 0;
+
+      // Calculate slide width including margin-right
+      const item = items[0];
+      const slideWidth = item ? item.offsetWidth + parseInt(window.getComputedStyle(item).marginRight) : 0;
+
       slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
-      
+
       dots.forEach((dot, index) => {
         dot.classList.toggle('active', index === Math.floor(currentSlide / slidesPerView));
       });
@@ -625,8 +259,9 @@
     function nextSlide() {
       const items = document.querySelectorAll('.slider-item');
       const totalSlides = items.length;
-      const maxSlide = totalSlides - slidesPerView;
-      
+      // Calculate maxSlide based on actual items and slidesPerView
+      const maxSlide = Math.max(0, totalSlides - slidesPerView);
+
       currentSlide = Math.min(currentSlide + slidesPerView, maxSlide);
       initSlider();
     }
@@ -641,40 +276,125 @@
       initSlider();
     }
 
-    let touchStartX = 0;
-    let touchEndX = 0;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const sliderContainer = document.querySelector('.slider-container');
-      if (sliderContainer) {
-        sliderContainer.addEventListener('touchstart', (e) => {
-          touchStartX = e.changedTouches[0].screenX;
-        });
-
-        sliderContainer.addEventListener('touchend', (e) => {
-          touchEndX = e.changedTouches[0].screenX;
-          if (touchStartX - touchEndX > 50) {
-            nextSlide();
-          } else if (touchEndX - touchStartX > 50) {
-            prevSlide();
+    async function fetchAnimeReleases() {
+      const query = `
+        query {
+          Page(page: 1, perPage: 50) {
+            media(seasonYear: 2025, type: ANIME, sort: TITLE_ROMAJI) {
+              id
+              title { romaji english }
+              startDate { year month day }
+              coverImage { large }
+            }
           }
-        });
+        }
+      `;
+      try {
+        const response = await axios.post(apiUrl, { query });
+        return response.data.data.Page.media.map(item => ({
+          title: item.title.romaji || item.title.english, // Use English title if Romaji is null
+          premiere: item.startDate.year && item.startDate.month
+            ? `${new Date(item.startDate.year, item.startDate.month - 1).toLocaleString('en-US', { month: 'long' })} ${item.startDate.year}`
+            : 'TBA 2025',
+          thumbnail: item.coverImage.large
+        }));
+      } catch (error) {
+        console.error('AniList API error:', error.message, error.response?.data);
+        return [];
       }
-      renderUrlList();
-    });
+    }
 
-    function convertJSTtoLocal(day, timeJST) {
-      const [hours, minutes] = timeJST.split(':').map(Number);
-      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const dayIndex = daysOfWeek.indexOf(day);
-      const now = new Date();
-      const jstDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + ((dayIndex - now.getUTCDay() + 7) % 7), hours - 9, minutes));
+    function getCurrentSeason() {
+      const month = new Date().getMonth(); // 0=Jan, 11=Dec
+      const year = new Date().getFullYear();
+      if (month >= 0 && month <= 2) return { season: 'Winter', year: year };
+      if (month >= 3 && month <= 5) return { season: 'Spring', year: year };
+      if (month >= 6 && month <= 8) return { season: 'Summer', year: year };
+      return { season: 'Fall', year: year };
+    }
+
+    async function fetchAnimeSchedule() {
+      const { season, year } = getCurrentSeason();
+      const query = `
+        query {
+          Page(page: 1, perPage: 50) {
+            media(season: ${season.toUpperCase()}, seasonYear: ${year}, type: ANIME, sort: TITLE_ROMAJI) {
+              id
+              title { romaji english }
+              startDate { year month day }
+              airingSchedule(notYetAired: true, perPage: 1) {
+                nodes {
+                  airingAt
+                  episode
+                }
+              }
+            }
+          }
+        }
+      `;
+      try {
+        const response = await axios.post(apiUrl, { query });
+        const media = response.data.data.Page.media;
+        // Mapping common anime titles to known channel IDs
+        const channelMap = {
+          "One Piece": "fuji_tv",
+          "Uchuujin MuuMuu": "at-x",
+          "Kingdom Season 5": "nhkg_tokyo",
+          "Kaiju No. 8": "tv_tokyo",
+          "Konosuba: An Explosion on This Wonderful World!": "tokyo_mx",
+          "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2": "tokyo_mx",
+          "Yuru Camp△ Season 3": "at-x",
+          "A Sign of Affection": "tokyo_mx",
+          "Spice and Wolf: Merchant Meets the Wise Wolf": "tv_tokyo",
+          "The Duke of Death and His Maid Season 3": "tokyo_mx",
+          "Re:Monster": "tokyo_mx",
+          "Unnamed Memory": "at-x",
+          "Black Butler: Public School Arc": "tokyo_mx",
+          "Tonari no Youkai-san": "at-x",
+          "Girls Band Cry": "tokyo_mx",
+          "Kuramerukagari": "tokyo_mx",
+          "The Many Sides of Voice Actor Radio": "at-x",
+          "Chiyu Mahou no Machigatta Tsukai-kata": "tokyo_mx",
+          "Ookami to Koshinryo: Merchant Meets the Wise Wolf": "tv_tokyo",
+          "WITCH WATCH": "tokyo_mx",
+          "Mobile Suit Gundam GQuuuuuuX": "tokyo_mx",
+          "The Beginning After the End": "tbs",
+          "Kanchigai no Atelier Meister": "tokyo_mx",
+          "I'm the Evil Lord of an Intergalactic Empire!", "tokyo_mx"
+          // Add more mappings as needed
+        };
+        return media.map(item => {
+          const airing = item.airingSchedule.nodes[0];
+          if (!airing) return null;
+          const date = new Date(airing.airingAt * 1000);
+          // Format day and time in JST
+          const day = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' });
+          const timeJST = date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' });
+          return {
+            title: item.title.romaji || item.title.english, // Use English title if Romaji is null
+            channelId: channelMap[item.title.romaji || item.title.english] || "tokyo_mx", // Use mapped channel or default
+            day,
+            timeJST,
+            nextAiring: airing.airingAt * 1000 // Timestamp for local time conversion
+          };
+        }).filter(item => item); // Filter out items with no airing schedule
+      } catch (error) {
+        console.error('AniList API error:', error.message, error.response?.data);
+        return fallbackAnimeSchedule; // Return fallback on error
+      }
+    }
+
+    function convertJSTtoLocal(nextAiring) {
+      const date = new Date(nextAiring);
+      // Format to local time
       return new Intl.DateTimeFormat(navigator.language, {
         weekday: 'short',
+        month: 'short',
+        day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
-      }).format(jstDate);
+      }).format(date);
     }
 
     function toggleFavorite(tvgId) {
@@ -685,141 +405,33 @@
         favorites.splice(index, 1);
       }
       localStorage.setItem('favorites', JSON.stringify(favorites));
-      render();
-    }
-
-    async function recognizeAndTranslate(text) {
-      try {
-        const response = await fetch(`https://script.google.com/macros/s/${GAS_KEY}/exec`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: text,
-            recog: 'ja',
-            trans: 'en'
-          })
-        });
-        if (!response.ok) throw new Error('Translation failed');
-        const data = await response.json();
-        return { transcript: data.speechText || text, translated: data.translatedText || text };
-      } catch (error) {
-        console.error('Recognition/Translation error:', error);
-        return { transcript: text, translated: text + ' (Translated)' };
-      }
-    }
-
-    function startSubtitles(video, subtitleElement) {
-      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-        document.getElementById('subtitle-error').textContent = 'Speech recognition not supported in this browser.';
-        document.getElementById('subtitle-error').classList.remove('hidden');
-        return;
-      }
-
-      recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = 'ja-JP';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onresult = async (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('');
-        if (transcript) {
-          const { translated } = await recognizeAndTranslate(transcript);
-          subtitleElement.textContent = translated;
-          subtitleElement.classList.remove('hidden');
-          clearTimeout(subtitleTimeout);
-          subtitleTimeout = setTimeout(() => {
-            subtitleElement.textContent = '';
-            subtitleElement.classList.add('hidden');
-          }, 750);
-        }
-      };
-
-      recognition.onerror = (event) => {
-        if (event.error === 'network') {
-          document.getElementById('subtitle-error').textContent = 'Network error. Retrying...';
-          document.getElementById('subtitle-error').classList.remove('hidden');
-          setTimeout(() => recognition.start(), 2000);
-        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          document.getElementById('subtitle-error').textContent = 'Microphone access denied. Please enable it to use subtitles.';
-          document.getElementById('subtitle-error').classList.remove('hidden');
-        }
-      };
-
-      recognition.onend = () => {
-        if (document.getElementById('subtitle-toggle')?.checked) {
-          recognition.start();
-        }
-      };
-
-      if (document.getElementById('subtitle-toggle')?.checked) {
-        recognition.start();
-      }
-    }
-
-    async function tryStreamUrl(video, url, streamType, errorElement, loadingElement, tvgId) {
-      if (streamType === 'hls' && Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          loadingElement.classList.add('hidden');
-          initAutoplay(tvgId);
-        });
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          errorElement.textContent = 'Failed to load HLS stream: ' + (data.details || 'Unknown error');
-          errorElement.classList.remove('hidden');
-          loadingElement.classList.add('hidden');
-        });
-      } else {
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
-          loadingElement.classList.add('hidden');
-          initAutoplay(tvgId);
-        }, { once: true });
-        video.addEventListener('error', () => {
-          errorElement.textContent = 'Failed to load stream. The media may not be supported or the URL is invalid.';
-          errorElement.classList.remove('hidden');
-          loadingElement.classList.add('hidden');
-        }, { once: true });
-      }
-    }
-
-    async function initStream(video, channel, tvgId) {
-      const loading = document.getElementById('loading');
-      const error = document.getElementById('error');
-      loading.classList.remove('hidden');
-      error.classList.add('hidden');
-
-      try {
-        await tryStreamUrl(video, channel.url, channel.streamType, error, loading, tvgId);
-        startSubtitles(video, document.getElementById('subtitle-overlay'));
-      } catch (err) {
-        console.error('Stream error:', err);
-        error.textContent = 'Failed to initialize stream. Please try again later.';
-        error.classList.remove('hidden');
-        loading.classList.add('hidden');
-      }
+      render(); // Re-render to update favorite icons
     }
 
     function renderHome() {
       const search = document.getElementById('search')?.value.toLowerCase() || '';
       const category = document.getElementById('category')?.value || '';
       let filteredChannels = channels;
+
+      // Filter by category
       if (category === 'Favorites') {
         filteredChannels = channels.filter(ch => favorites.includes(ch.tvgId));
       } else if (category) {
         filteredChannels = channels.filter(ch => ch.group === category);
       }
+
+      // Filter by search term
       filteredChannels = filteredChannels.filter(ch => !search || ch.name.toLowerCase().includes(search));
+
+      // Determine groups to display
       const groups = category === 'Favorites' ? ['Favorites'] : [...new Set(filteredChannels.map(ch => ch.group))];
+
       return `
         <div class="page-transition">
           <div class="hero-bg bg-cover bg-center h-96 flex items-center justify-center mb-8 rounded-lg">
             <div class="text-center text-white">
               <h1 class="text-4xl font-bold mb-4">Watch Live TV Now</h1>
-              <p class="text-lg">Explore top channels like ${channels.find(ch => ch.tvgId === featuredChannels[0])?.name || 'Anime'} and more!</p>
+              <p class="text-lg">Explore top channels like ${channels.find(ch => ch.tvgId === featuredChannels[0])?.name || 'NHK G'} and more!</p>
             </div>
           </div>
           ${groups.map(group => `
@@ -829,12 +441,12 @@
                 ${filteredChannels.filter(ch => group === 'Favorites' || ch.group === group).map(ch => `
                   <div class="channel-card relative bg-gray-800 rounded-lg overflow-hidden">
                     <a href="#page=channel/${ch.tvgId}">
-                      <img src="${ch.logo}" alt="${ch.name}" class="w-full h-32 object-contain p-4" onerror="this.src='https://placehold.co/150x150'">
+                      <img src="${ch.logo}" alt="${ch.name}" class="w-full h-32 object-contain p-4" onerror="this.src='https://placehold.co/150x150?text=No+Logo'">
                       <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black bg-opacity-50 transition-opacity">
                         <svg class="w-12 h-12 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                       </div>
                     </a>
-                    <button onclick="toggleFavorite('${ch.tvgId}')" class="absolute top-2 right-2 text-red-500">
+                    <button onclick="toggleFavorite('${ch.tvgId}')" class="absolute top-2 right-2 text-red-500 z-10">
                       <svg class="w-6 h-6 ${favorites.includes(ch.tvgId) ? 'fill-current' : 'fill-none stroke-current'}" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                       </svg>
@@ -849,100 +461,105 @@
       `;
     }
 
-    async function renderAnimePage() {
-      const animeSchedule = await fetchAnimeSchedule();
-      const animeReleases = await fetchAnimeReleases();
+    async function renderAnimePage(animeSchedule = fallbackAnimeSchedule, animeReleases = []) {
+      const { season, year } = getCurrentSeason();
+      // Group anime releases by month
       const animeByMonth = animeReleases.reduce((acc, anime) => {
         const month = anime.premiere.split(' ')[0];
         if (!acc[month]) acc[month] = [];
         acc[month].push(anime);
         return acc;
       }, {});
-      
+
       const totalAnime = animeReleases.length;
+      // Calculate number of dot indicators needed
       const dotsCount = Math.ceil(totalAnime / slidesPerView);
-      
+
       return `
         <div class="page-transition">
           <a href="#" class="text-red-500 hover:underline mb-4 inline-block">← Back to Home</a>
           <h1 class="text-3xl font-bold mb-8">Anime Hub</h1>
-          
-          <div class="mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Anime Releasing in 2025</h2>
-            
-            <div class="slider-container">
-              <button class="slider-nav slider-prev" onclick="prevSlide()">❮</button>
-              <div class="slider flex">
-                ${animeReleases.map(anime => `
-                  <div class="slider-item anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
-                    <img src="${anime.thumbnail}" 
-                         alt="${anime.title}" 
-                         class="w-full h-48 object-cover mb-2 rounded">
-                    <p class="text-sm font-medium">${anime.title}</p>
-                    <p class="text-xs text-gray-400">${anime.premiere}</p>
-                  </div>
-                `).join('')}
-              </div>
-              <button class="slider-nav slider-next" onclick="nextSlide()">❯</button>
-            </div>
-            
-            <div class="slider-dots">
-              ${Array.from({length: dotsCount}, (_, i) => `
-                <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>
-              `).join('')}
-            </div>
-          </div>
-          
-          ${Object.entries(animeByMonth).map(([month, animeList]) => `
+          ${animeReleases.length > 0 ? `
             <div class="mb-8">
-              <h3 class="text-xl font-semibold mb-2">${month} 2025 Releases</h3>
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                ${animeList.map(anime => `
-                  <div class="anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
-                    <img src="${anime.thumbnail}" 
-                         alt="${anime.title}" 
-                         class="w-full h-48 object-cover mb-2 rounded">
-                    <p class="text-sm font-medium">${anime.title}</p>
-                    <p class="text-xs text-gray-400">${anime.premiere}</p>
-                  </div>
+              <h2 class="text-2xl font-semibold mb-4">Anime Releasing in ${year}</h2>
+              <div class="slider-container">
+                <button class="slider-nav slider-prev" onclick="prevSlide()">❮</button>
+                <div class="slider flex">
+                  ${animeReleases.map(anime => `
+                    <div class="slider-item anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
+                      <img src="${anime.thumbnail || 'https://placehold.co/200x300?text=No+Image'}"
+                           alt="${anime.title}"
+                           class="w-full h-48 object-cover mb-2 rounded">
+                      <p class="text-sm font-medium">${anime.title}</p>
+                      <p class="text-xs text-gray-400">${anime.premiere}</p>
+                    </div>
+                  `).join('')}
+                </div>
+                <button class="slider-nav slider-next" onclick="nextSlide()">❯</button>
+              </div>
+              <div class="slider-dots">
+                ${Array.from({length: dotsCount}, (_, i) => `
+                  <div class="slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>
                 `).join('')}
               </div>
             </div>
-          `).join('')}
-          
+            ${Object.entries(animeByMonth).map(([month, animeList]) => `
+              <div class="mb-8">
+                <h3 class="text-xl font-semibold mb-2">${month} ${year} Releases</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  ${animeList.map(anime => `
+                    <div class="anime-card bg-gray-800 rounded-lg overflow-hidden p-4 text-center">
+                      <img src="${anime.thumbnail || 'https://placehold.co/200x300?text=No+Image'}"
+                           alt="${anime.title}"
+                           class="w-full h-48 object-cover mb-2 rounded">
+                      <p class="text-sm font-medium">${anime.title}</p>
+                      <p class="text-xs text-gray-400">${anime.premiere}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `).join('')}
+          ` : `
+            <div class="text-center text-red-500">Failed to load anime releases</div>
+          `}
           <div class="mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Ongoing Anime Schedule (Spring 2025)</h2>
-            <table class="schedule-table">
-              <thead>
-                <tr>
-                  <th>Anime</th>
-                  <th>Channel</th>
-                  <th>JST Air Time</th>
-                  <th>Local Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${animeSchedule
-                  .sort((a, b) => {
-                    const daysOrder = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                    const dayA = daysOrder.indexOf(a.day);
-                    const dayB = daysOrder.indexOf(b.day);
-                    if (dayA !== dayB) return dayA - dayB;
-                    return a.timeJST.localeCompare(b.timeJST);
-                  })
-                  .map(anime => {
-                    const channel = channels.find(ch => ch.tvgId === anime.channelId);
-                    return `
-                      <tr>
-                        <td>${anime.title}</td>
-                        <td><a href="#page=channel/${anime.channelId}" class="text-red-500 hover:underline">${channel?.name || 'Unknown'}</a></td>
-                        <td>${anime.day} ${anime.timeJST} JST</td>
-                        <td>${convertJSTtoLocal(anime.day, anime.timeJST)}</td>
-                      </tr>
-                    `;
-                  }).join('')}
-              </tbody>
-            </table>
+            <h2 class="text-2xl font-semibold mb-4">Ongoing Anime Schedule (${season} ${year})</h2>
+            ${animeSchedule.length > 0 ? `
+              <table class="schedule-table">
+                <thead>
+                  <tr>
+                    <th>Anime</th>
+                    <th>Channel</th>
+                    <th>JST Air Time</th>
+                    <th>Local Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${animeSchedule
+                    .sort((a, b) => {
+                      // Sort by day of the week, then by time
+                      const daysOrder = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                      const dayA = daysOrder.indexOf(a.day);
+                      const dayB = daysOrder.indexOf(b.day);
+                      if (dayA !== dayB) return dayA - dayB;
+                      return a.timeJST.localeCompare(b.timeJST);
+                    })
+                    .map(anime => {
+                      const channel = channels.find(ch => ch.tvgId === anime.channelId);
+                      return `
+                        <tr>
+                          <td>${anime.title}</td>
+                          <td><a href="#page=channel/${anime.channelId}" class="text-red-500 hover:underline">${channel?.name || 'Unknown Channel'}</a></td>
+                          <td>${anime.day} ${anime.timeJST} JST</td>
+                          <td>${convertJSTtoLocal(anime.nextAiring)}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                </tbody>
+              </table>
+            ` : `
+              <div class="text-center text-red-500">No schedule data available</div>
+            `}
           </div>
         </div>
       `;
@@ -951,7 +568,10 @@
     function renderChannel(tvgId) {
       const channel = channels.find(ch => ch.tvgId === tvgId);
       if (!channel) return `<div class="text-center text-red-500 page-transition">Channel not found</div>`;
+
+      // Find related channels in the same group, excluding the current one
       const relatedChannels = channels.filter(ch => ch.group === channel.group && ch.tvgId !== tvgId).slice(0, 4);
+
       return `
         <div class="page-transition">
           <a href="#" class="text-red-500 hover:underline mb-4 inline-block">← Back to Channels</a>
@@ -964,20 +584,20 @@
             </button>
           </div>
           <div id="error" class="text-red-500 mb-4 hidden"></div>
-          <div class="relative mb-6">
-            <video id="video-player" controls playsinline class="mx-auto rounded-lg"></video>
+          <div class="player-container relative mb-6">
+            <video id="video-player" playsinline class="mx-auto rounded-lg"></video>
             <div id="loading" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
               <div class="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
             <div id="subtitle-overlay" class="subtitle-overlay hidden"></div>
-          </div>
+             </div>
           <div class="mb-4 flex items-center space-x-4">
-            <label class="flex items-center">
-              <input type="checkbox" id="subtitle-toggle" class="mr-2">
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" id="subtitle-toggle" class="mr-2 form-checkbox text-red-500 rounded">
               <span>Enable Subtitles (Japanese to English)</span>
             </label>
-            <label class="flex items-center">
-              <input type="checkbox" id="autoplay-toggle" class="mr-2" checked>
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" id="autoplay-toggle" class="mr-2 form-checkbox text-red-500 rounded" checked>
               <span>Enable Autoplay</span>
             </label>
           </div>
@@ -996,12 +616,12 @@
               ${relatedChannels.map(ch => `
                 <div class="channel-card relative bg-gray-800 rounded-lg overflow-hidden">
                   <a href="#page=channel/${ch.tvgId}">
-                    <img src="${ch.logo}" alt="${ch.name}" class="w-full h-24 object-contain p-4" onerror="this.src='https://placehold.co/150x150'">
+                    <img src="${ch.logo}" alt="${ch.name}" class="w-full h-24 object-contain p-4" onerror="this.src='https://placehold.co/150x150?text=No+Logo'">
                     <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black bg-opacity-50 transition-opacity">
                       <svg class="w-10 h-10 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     </div>
                   </a>
-                  <button onclick="toggleFavorite('${ch.tvgId}')" class="absolute top-2 right-2 text-red-500">
+                  <button onclick="toggleFavorite('${ch.tvgId}')" class="absolute top-2 right-2 text-red-500 z-10">
                     <svg class="w-6 h-6 ${favorites.includes(ch.tvgId) ? 'fill-current' : 'fill-none stroke-current'}" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
@@ -1015,93 +635,69 @@
       `;
     }
 
-    function initAutoplay(tvgId) {
-      const autoplayToggle = document.getElementById('autoplay-toggle');
-      const countdownElement = document.getElementById('autoplay-countdown');
-      const relatedChannels = channels.filter(ch => ch.group === channels.find(c => c.tvgId === tvgId)?.group && ch.tvgId !== tvgId);
-      if (!relatedChannels.length || !autoplayToggle.checked) return;
-
-      let timeLeft = 300;
-      countdownElement.classList.remove('hidden');
-      const interval = setInterval(() => {
-        if (!autoplayToggle.checked) {
-          clearInterval(interval);
-          countdownElement.classList.add('hidden');
-          return;
-        }
-        countdownElement.textContent = `Next channel in ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`;
-        timeLeft--;
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          const nextChannel = relatedChannels[0];
-          window.location.hash = `page=channel/${nextChannel.tvgId}`;
-        }
-      }, 1000);
-    }
-
     async function render() {
-      const hash = window.location.hash;
+      const hash = window.location.hash || '#';
       const app = document.getElementById('app');
-      if (!app) {
-        console.error('App container not found');
-        return;
+
+      // Destroy previous player instance if it exists
+      if (playerInstance) {
+        playerInstance.destroy();
+        playerInstance = null;
       }
-      try {
-        if (hash.startsWith('#page=channel/')) {
-          const tvgId = hash.split('#page=channel/')[1];
-          app.innerHTML = renderChannel(tvgId);
+
+      if (hash.startsWith('#page=channel/')) {
+        const tvgId = hash.split('#page=channel/')[1];
+        app.innerHTML = renderChannel(tvgId); // Render channel page structure
+        const channel = channels.find(ch => ch.tvgId === tvgId);
+        if (channel) {
           const video = document.getElementById('video-player');
-          const channel = channels.find(ch => ch.tvgId === tvgId);
-          if (channel) {
-            initStream(video, channel, tvgId);
-          }
-          document.getElementById('subtitle-toggle')?.addEventListener('change', () => {
-            if (recognition) {
-              if (document.getElementById('subtitle-toggle').checked) {
-                recognition.start();
-              } else {
-                recognition.stop();
-              }
-            }
-          });
-          document.getElementById('autoplay-toggle')?.addEventListener('change', () => initAutoplay(tvgId));
-        } else if (hash === '#page=anime') {
-          app.innerHTML = await renderAnimePage();
-          setTimeout(initSlider, 0);
-        } else {
-          app.innerHTML = renderHome();
+          const subtitleOverlay = document.getElementById('subtitle-overlay');
+          const subtitleToggle = document.getElementById('subtitle-toggle');
+          const autoplayToggle = document.getElementById('autoplay-toggle');
+          const error = document.getElementById('error');
+          const loading = document.getElementById('loading');
+          const countdown = document.getElementById('autoplay-countdown');
+
+          // Create and initialize the player instance
+          // The channel.url now points to our hypothetical proxy endpoint
+          playerInstance = new HBOMaxPlayer(
+            video,
+            channel.url, // This is now the proxy URL
+            tvgId,
+            channels,
+            subtitleOverlay,
+            subtitleToggle,
+            autoplayToggle,
+            error,
+            loading,
+            countdown
+          );
+          await playerInstance.init(); // Initialize HLS, controls, etc.
         }
-        renderUrlList();
-        document.getElementById('search')?.addEventListener('input', render);
-        document.getElementById('category')?.addEventListener('change', render);
-      } catch (error) {
-        console.error('Render error:', error);
-        app.innerHTML = '<p class="text-red-500">An error occurred while loading the page. Please try again.</p>';
+      } else if (hash === '#page=anime') {
+        // Fetch and render Anime page
+        const [animeSchedule, animeReleases] = await Promise.all([
+          fetchAnimeSchedule(),
+          fetchAnimeReleases()
+        ]);
+        app.innerHTML = await renderAnimePage(animeSchedule, animeReleases);
+        if (animeReleases.length > 0) {
+          initSlider(); // Initialize slider after rendering
+        }
+      } else {
+        // Render Home page
+        app.innerHTML = renderHome();
       }
+
+      // Add event listeners for search and category filters on the home page
+      document.getElementById('search')?.addEventListener('input', render);
+      document.getElementById('category')?.addEventListener('change', render);
     }
 
-    window.prevSlide = prevSlide;
-    window.nextSlide = nextSlide;
-    window.goToSlide = goToSlide;
-    window.toggleFavorite = toggleFavorite;
-    window.toggleMenu = toggleMenu;
-    window.deleteM3UUrl = deleteM3UUrl;
-
-    async function init() {
-      try {
-        await loadSavedPlaylists();
-        await render();
-      } catch (error) {
-        console.error('Init error:', error);
-        const app = document.getElementById('app');
-        if (app) {
-          app.innerHTML = '<p class="text-red-500">Failed to initialize the app. Please try again.</p>';
-        }
-      }
-    }
-
+    // Listen for hash changes to navigate between pages
     window.addEventListener('hashchange', render);
-    document.addEventListener('DOMContentLoaded', init);
+    // Initial render based on current hash
+    render();
   </script>
 </body>
 </html>
